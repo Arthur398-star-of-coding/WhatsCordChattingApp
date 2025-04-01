@@ -1,0 +1,2978 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsChat</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#5D5CDE',
+                        secondary: '#7289DA',
+                        success: '#43B581',
+                        danger: '#F04747',
+                        warning: '#FAA61A',
+                        light: {
+                            bg: '#FFFFFF',
+                            sidebar: '#F5F5F5',
+                            card: '#FFFFFF',
+                            text: '#202225'
+                        },
+                        dark: {
+                            bg: '#181818',
+                            sidebar: '#202225',
+                            card: '#2F3136',
+                            text: '#DCDDDE'
+                        }
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+        .scrollbar-hide {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        .message-in {
+            background-color: #E1F5FE;
+            border-radius: 0.75rem 0.75rem 0.75rem 0;
+        }
+        .message-out {
+            background-color: #E1FFC7;
+            border-radius: 0.75rem 0.75rem 0 0.75rem;
+        }
+        .dark .message-in {
+            background-color: #383C43;
+        }
+        .dark .message-out {
+            background-color: #2A5235;
+        }
+        .emoji-picker {
+            display: none;
+            position: absolute;
+            bottom: 60px;
+            right: 0;
+            width: 250px;
+            height: 250px;
+            background-color: white;
+            border-radius: 1rem;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            padding: 1rem;
+            overflow-y: auto;
+            z-index: 50;
+        }
+        .dark .emoji-picker {
+            background-color: #2F3136;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+        }
+        .emoji-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 0.5rem;
+        }
+        .emoji-item {
+            font-size: 1.5rem;
+            cursor: pointer;
+            text-align: center;
+            padding: 0.25rem;
+            border-radius: 0.25rem;
+            transition: all 0.2s;
+        }
+        .emoji-item:hover {
+            background-color: #f1f1f1;
+        }
+        .dark .emoji-item:hover {
+            background-color: #40444B;
+        }
+        /* Animation for real-time status indicator */
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+        .blinking {
+            animation: blink 1.5s linear infinite;
+        }
+        /* Modal styling */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+        .modal-content {
+            background-color: white;
+            padding: 2rem;
+            border-radius: 0.5rem;
+            max-width: 90%;
+            width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        .dark .modal-content {
+            background-color: #2F3136;
+            color: #DCDDDE;
+        }
+        /* Toast notification */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            background-color: #333;
+            color: white;
+            z-index: 100;
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+        }
+        .toast.show {
+            opacity: 1;
+        }
+        /* Profile card */
+        .profile-card {
+            transition: transform 0.2s ease;
+        }
+        .profile-card:hover {
+            transform: translateY(-2px);
+        }
+        /* Call UI */
+        .call-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.8);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 200;
+        }
+        .call-video {
+            width: 100%;
+            max-width: 800px;
+            height: auto;
+            background-color: #000;
+            border-radius: 0.5rem;
+            overflow: hidden;
+        }
+        .call-controls {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        .call-button {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            font-size: 1.2rem;
+        }
+        .call-end {
+            background-color: #F04747;
+            color: white;
+        }
+        .call-toggle {
+            background-color: #4F545C;
+            color: white;
+        }
+        .call-active {
+            background-color: #43B581;
+        }
+        /* Server creation form */
+        .server-form {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        /* Admin controls */
+        .admin-controls {
+            border-top: 1px solid #ddd;
+            padding-top: 1rem;
+            margin-top: 1rem;
+        }
+        .admin-button {
+            padding: 0.5rem 1rem;
+            border-radius: 0.25rem;
+            font-size: 0.9rem;
+            cursor: pointer;
+        }
+        .admin-danger {
+            background-color: #F04747;
+            color: white;
+        }
+        .admin-success {
+            background-color: #43B581;
+            color: white;
+        }
+    </style>
+</head>
+<body class="font-sans antialiased text-light-text dark:text-dark-text bg-light-bg dark:bg-dark-bg">
+    <!-- App container with auth state awareness -->
+    <div id="app-container">
+        <!-- Authentication screens (login/register) -->
+        <div id="auth-container" class="min-h-screen flex flex-col justify-center items-center p-4">
+            <div class="w-full max-w-md">
+                <!-- App logo/branding -->
+                <div class="flex justify-center mb-6">
+                    <div class="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center text-white text-2xl font-bold">
+                        W<span class="text-lg">C</span>
+                    </div>
+                </div>
+                <h1 class="text-2xl font-bold text-center mb-1">WhatsChat</h1>
+                <p class="text-center text-gray-500 dark:text-gray-400 mb-8">Connect with friends in real-time</p>
+                
+                <!-- Auth tabs -->
+                <div class="flex border-b border-gray-200 dark:border-gray-700 mb-6">
+                    <button id="login-tab" class="px-4 py-2 font-medium border-b-2 border-primary text-primary">Log In</button>
+                    <button id="register-tab" class="px-4 py-2 font-medium text-gray-500 dark:text-gray-400">Register</button>
+                </div>
+                
+                <!-- Login form -->
+                <div id="login-form">
+                    <div class="mb-4">
+                        <label for="login-email" class="block text-sm font-medium mb-1">Email</label>
+                        <input type="email" id="login-email" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-dark-card text-light-text dark:text-dark-text focus:outline-none focus:ring-2 focus:ring-primary text-base" placeholder="yourname@example.com">
+                        <div id="login-email-error" class="text-danger text-sm mt-1 hidden"></div>
+                    </div>
+                    <div class="mb-6">
+                        <label for="login-password" class="block text-sm font-medium mb-1">Password</label>
+                        <input type="password" id="login-password" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-dark-card text-light-text dark:text-dark-text focus:outline-none focus:ring-2 focus:ring-primary text-base" placeholder="••••••••">
+                        <div id="login-password-error" class="text-danger text-sm mt-1 hidden"></div>
+                    </div>
+                    <button id="login-button" class="w-full bg-primary hover:bg-opacity-90 text-white font-medium py-3 px-4 rounded-lg transition-all">Log In</button>
+                    <div class="text-center mt-4">
+                        <button id="admin-login" class="text-primary font-medium">Login as Admin</button>
+                    </div>
+                </div>
+                
+                <!-- Register form (initially hidden) -->
+                <div id="register-form" class="hidden">
+                    <div class="mb-4">
+                        <label for="register-name" class="block text-sm font-medium mb-1">Display Name</label>
+                        <input type="text" id="register-name" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-dark-card text-light-text dark:text-dark-text focus:outline-none focus:ring-2 focus:ring-primary text-base" placeholder="Your Name">
+                        <div id="register-name-error" class="text-danger text-sm mt-1 hidden"></div>
+                    </div>
+                    <div class="mb-4">
+                        <label for="register-username" class="block text-sm font-medium mb-1">Username</label>
+                        <input type="text" id="register-username" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-dark-card text-light-text dark:text-dark-text focus:outline-none focus:ring-2 focus:ring-primary text-base" placeholder="unique_username">
+                        <div id="register-username-error" class="text-danger text-sm mt-1 hidden"></div>
+                    </div>
+                    <div class="mb-4">
+                        <label for="register-email" class="block text-sm font-medium mb-1">Email</label>
+                        <input type="email" id="register-email" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-dark-card text-light-text dark:text-dark-text focus:outline-none focus:ring-2 focus:ring-primary text-base" placeholder="yourname@example.com">
+                        <div id="register-email-error" class="text-danger text-sm mt-1 hidden"></div>
+                    </div>
+                    <div class="mb-4">
+                        <label for="register-password" class="block text-sm font-medium mb-1">Password</label>
+                        <input type="password" id="register-password" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-dark-card text-light-text dark:text-dark-text focus:outline-none focus:ring-2 focus:ring-primary text-base" placeholder="••••••••">
+                        <div id="register-password-error" class="text-danger text-sm mt-1 hidden"></div>
+                    </div>
+                    <div class="mb-6">
+                        <label for="register-confirm" class="block text-sm font-medium mb-1">Confirm Password</label>
+                        <input type="password" id="register-confirm" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-dark-card text-light-text dark:text-dark-text focus:outline-none focus:ring-2 focus:ring-primary text-base" placeholder="••••••••">
+                        <div id="register-confirm-error" class="text-danger text-sm mt-1 hidden"></div>
+                    </div>
+                    <button id="register-button" class="w-full bg-primary hover:bg-opacity-90 text-white font-medium py-3 px-4 rounded-lg transition-all">Create Account</button>
+                </div>
+                
+                <!-- Theme toggle for login screen -->
+                <div class="mt-8 text-center">
+                    <button id="auth-theme-toggle" class="text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-primary">
+                        <i class="fas fa-moon dark:hidden"></i>
+                        <i class="fas fa-sun hidden dark:block"></i>
+                        <span class="ml-2">Toggle Dark Mode</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Main chat application (initially hidden) -->
+        <div id="chat-container" class="hidden h-screen overflow-hidden">
+            <div class="flex h-full">
+                <!-- Server sidebar (Discord style) -->
+                <div class="w-16 bg-dark-sidebar flex-shrink-0 h-full hidden sm:flex flex-col items-center py-4 space-y-4 overflow-y-auto scrollbar-hide">
+                    <div class="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center text-xl font-bold cursor-pointer" id="home-button">
+                        W
+                    </div>
+                    <div class="w-12 h-0.5 bg-gray-700"></div>
+                    <div class="server-list space-y-4">
+                        <!-- Servers will be populated here -->
+                    </div>
+                    
+                    <!-- Add server button -->
+                    <div class="server-icon w-12 h-12 rounded-xl bg-success hover:bg-green-400 transition-all cursor-pointer flex items-center justify-center text-white" id="add-server-button">
+                        <i class="fas fa-plus"></i>
+                    </div>
+                    
+                    <!-- Profile button at bottom -->
+                    <div class="mt-auto">
+                        <div id="profile-button" class="w-12 h-12 rounded-full bg-gray-700 hover:bg-primary transition-all cursor-pointer flex items-center justify-center text-white">
+                            <i class="fas fa-user"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Channels/Chats sidebar (WhatsApp style) -->
+                <div id="channels-sidebar" class="w-full sm:w-80 md:w-96 bg-light-sidebar dark:bg-dark-sidebar border-r border-gray-200 dark:border-gray-700 flex-shrink-0 overflow-hidden flex flex-col">
+                    <!-- Header -->
+                    <div class="px-4 py-3 flex items-center justify-between border-b border-gray-200 dark:border-gray-700">
+                        <div class="flex items-center space-x-2">
+                            <div class="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center text-xl font-bold sm:hidden" id="mobile-home">
+                                W
+                            </div>
+                            <h1 class="text-xl font-bold">WhatsChat</h1>
+                        </div>
+                        <div class="flex items-center space-x-3">
+                            <button id="search-button" class="text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-primary">
+                                <i class="fas fa-search"></i>
+                            </button>
+                            <button id="theme-toggle" class="text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-primary">
+                                <i class="fas fa-moon dark:hidden"></i>
+                                <i class="fas fa-sun hidden dark:block"></i>
+                            </button>
+                            <button id="menu-button" class="text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-primary">
+                                <i class="fas fa-ellipsis-vertical"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Server/Channel Info (when in server view) -->
+                    <div id="server-info" class="hidden px-4 py-2 bg-gray-100 dark:bg-gray-800">
+                        <h2 class="font-bold text-lg" id="server-name">Server Name</h2>
+                        <p class="text-sm text-gray-500 dark:text-gray-400"><span id="server-member-count">0</span> members</p>
+                        <div id="server-actions" class="mt-2 flex space-x-2">
+                            <button id="invite-button" class="text-xs bg-primary text-white px-2 py-1 rounded">Invite People</button>
+                            <button id="server-settings-button" class="text-xs bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded">Settings</button>
+                        </div>
+                    </div>
+
+                    <!-- Search -->
+                    <div id="search-container" class="hidden px-4 py-2 border-b border-gray-200 dark:border-gray-700">
+                        <div class="relative">
+                            <input type="text" id="search-input" placeholder="Search for users, messages, or servers" class="w-full px-4 py-2 pl-10 bg-white dark:bg-dark-card rounded-lg text-light-text dark:text-dark-text border border-gray-200 dark:border-gray-700 focus:outline-none focus:border-primary text-base">
+                            <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
+                            <button id="close-search" class="absolute right-3 top-3 text-gray-400 hover:text-gray-600">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <div id="search-results" class="mt-2 hidden">
+                            <!-- Search results will be populated here -->
+                        </div>
+                    </div>
+
+                    <!-- Chats list container -->
+                    <div class="flex-1 overflow-y-auto scrollbar-hide" id="chats-list-container">
+                        <!-- Friend Requests Section -->
+                        <div id="friend-requests-section" class="px-4 py-2 border-b border-gray-200 dark:border-gray-700">
+                            <div class="flex justify-between items-center mb-1">
+                                <h3 class="font-medium">Friend Requests</h3>
+                                <span id="friend-requests-count" class="bg-primary text-white text-xs px-2 py-0.5 rounded-full hidden">0</span>
+                            </div>
+                            <div id="friend-requests-list" class="hidden">
+                                <!-- Friend requests will be populated here -->
+                            </div>
+                            <button id="add-friend-button" class="w-full mt-1 py-2 px-3 text-sm bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg flex items-center">
+                                <i class="fas fa-user-plus mr-2 text-primary"></i>
+                                <span>Add Friend</span>
+                            </button>
+                        </div>
+
+                        <!-- Direct Messages Section -->
+                        <div id="direct-messages-section">
+                            <div class="px-4 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase flex justify-between items-center">
+                                <span>Direct Messages</span>
+                                <button class="text-primary hover:text-primary-dark" id="new-dm-button">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                            </div>
+                            <div id="dm-list" class="space-y-1 px-2">
+                                <!-- DMs will be populated here -->
+                            </div>
+                        </div>
+
+                        <!-- Channels Section -->
+                        <div id="channels-section">
+                            <div class="px-4 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase mt-2">
+                                Channels
+                            </div>
+                            <div id="channel-list" class="space-y-1 px-2">
+                                <!-- Channels will be populated here -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Server member list (shown when in server view) -->
+                    <div id="server-members-container" class="hidden flex-1 overflow-y-auto scrollbar-hide">
+                        <div class="px-4 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                            Members - <span id="member-count">0</span>
+                        </div>
+                        <div id="member-list" class="space-y-1 px-2">
+                            <!-- Members will be populated here -->
+                        </div>
+                    </div>
+
+                    <!-- Bottom actions -->
+                    <div class="px-4 py-3 border-t border-gray-200 dark:border-gray-700 flex justify-between">
+                        <button id="settings-button" class="text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-primary">
+                            <i class="fas fa-cog"></i>
+                        </button>
+                        <button id="friends-button" class="text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-primary">
+                            <i class="fas fa-user-friends"></i>
+                        </button>
+                        <button id="new-chat-button" class="bg-primary text-white rounded-full w-10 h-10 flex items-center justify-center">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Chat area -->
+                <div id="chat-area" class="flex-1 flex flex-col overflow-hidden">
+                    <!-- Chat header -->
+                    <div id="chat-header" class="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+                        <div class="flex items-center">
+                            <button id="back-button" class="sm:hidden mr-2 text-gray-500 dark:text-gray-400">
+                                <i class="fas fa-arrow-left"></i>
+                            </button>
+                            <div class="relative">
+                                <div id="chat-avatar" class="w-10 h-10 rounded-full bg-purple-500 flex items-center justify-center text-white font-medium">
+                                    JS
+                                </div>
+                                <div id="chat-status" class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-success rounded-full border-2 border-white dark:border-dark-bg"></div>
+                            </div>
+                            <div class="ml-3">
+                                <h3 id="chat-name" class="font-medium">John Smith</h3>
+                                <p id="chat-subtitle" class="text-xs text-gray-500 dark:text-gray-400">Online</p>
+                            </div>
+                        </div>
+                        <div class="flex space-x-4">
+                            <button id="chat-video-button" class="text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-primary">
+                                <i class="fas fa-video"></i>
+                            </button>
+                            <button id="chat-call-button" class="text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-primary">
+                                <i class="fas fa-phone"></i>
+                            </button>
+                            <button id="chat-search-button" class="text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-primary">
+                                <i class="fas fa-search"></i>
+                            </button>
+                            <button id="chat-menu-button" class="text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-primary">
+                                <i class="fas fa-ellipsis-vertical"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Welcome screen (shown when no chat is selected) -->
+                    <div id="welcome-screen" class="flex-1 flex flex-col items-center justify-center p-4 text-center">
+                        <div class="w-20 h-20 bg-primary rounded-full flex items-center justify-center text-white text-3xl font-bold mb-4">
+                            W
+                        </div>
+                        <h2 class="text-2xl font-bold mb-2">Welcome to WhatsChat</h2>
+                        <p class="text-gray-500 dark:text-gray-400 max-w-md">
+                            Connect with friends, join channels, and chat in real-time.
+                        </p>
+                        <div class="mt-6 flex flex-wrap justify-center gap-3">
+                            <button id="welcome-add-friend" class="flex items-center px-4 py-2 bg-primary text-white rounded-lg">
+                                <i class="fas fa-user-plus mr-2"></i>
+                                Add Friend
+                            </button>
+                            <button id="welcome-explore" class="flex items-center px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg">
+                                <i class="fas fa-compass mr-2"></i>
+                                Explore Channels
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Messages container -->
+                    <div id="messages-container" class="hidden flex-1 overflow-y-auto p-4 space-y-4">
+                        <!-- Messages will be populated here -->
+                    </div>
+
+                    <!-- Message input -->
+                    <div id="message-input-container" class="hidden border-t border-gray-200 dark:border-gray-700 p-3 relative">
+                        <div id="emoji-picker" class="emoji-picker dark:text-white">
+                            <div class="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">Emojis</div>
+                            <div class="emoji-grid">
+                                <div class="emoji-item">😃</div>
+                                <div class="emoji-item">😂</div>
+                                <div class="emoji-item">😍</div>
+                                <div class="emoji-item">🙌</div>
+                                <div class="emoji-item">👍</div>
+                                <div class="emoji-item">👏</div>
+                                <div class="emoji-item">🎉</div>
+                                <div class="emoji-item">🔥</div>
+                                <div class="emoji-item">❤️</div>
+                                <div class="emoji-item">👋</div>
+                                <div class="emoji-item">🤔</div>
+                                <div class="emoji-item">🙏</div>
+                                <div class="emoji-item">👌</div>
+                                <div class="emoji-item">😊</div>
+                                <div class="emoji-item">🥳</div>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <button id="attachment-button" class="text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-primary">
+                                <i class="fas fa-paperclip"></i>
+                            </button>
+                            <div class="flex-1 relative">
+                                <input id="message-input" type="text" placeholder="Type a message" class="w-full px-4 py-2 rounded-full bg-gray-100 dark:bg-dark-card border border-gray-200 dark:border-gray-700 focus:outline-none focus:border-primary text-light-text dark:text-dark-text text-base">
+                            </div>
+                            <button id="emoji-button" class="text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-primary">
+                                <i class="far fa-smile"></i>
+                            </button>
+                            <button id="send-button" class="bg-primary text-white rounded-full w-10 h-10 flex items-center justify-center">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Call UI (hidden by default) -->
+    <div id="call-container" class="call-container hidden">
+        <div id="call-video" class="call-video">
+            <video id="local-video" autoplay muted></video>
+            <video id="remote-video" autoplay></video>
+        </div>
+        <div class="call-controls">
+            <button id="call-mute" class="call-button call-toggle">
+                <i class="fas fa-microphone"></i>
+            </button>
+            <button id="call-video-toggle" class="call-button call-toggle">
+                <i class="fas fa-video"></i>
+            </button>
+            <button id="call-end-button" class="call-button call-end">
+                <i class="fas fa-phone"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Member info modal -->
+    <div id="member-info-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold">Member Info</h3>
+                <button class="close-modal text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="flex flex-col items-center mb-4">
+                <div id="modal-avatar" class="w-20 h-20 rounded-full bg-primary flex items-center justify-center text-white text-xl mb-2">
+                    JS
+                </div>
+                <h4 id="modal-name" class="text-lg font-bold">John Smith</h4>
+                <p id="modal-status" class="text-sm text-gray-500 dark:text-gray-400">Online</p>
+                <p id="modal-username" class="text-sm text-gray-500 dark:text-gray-400">@username</p>
+            </div>
+            <div class="border-t border-gray-200 dark:border-gray-700 pt-4">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-sm font-medium">Member Since</span>
+                    <span id="modal-member-since" class="text-sm">Jun 12, 2023</span>
+                </div>
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-sm font-medium">Last Active</span>
+                    <span id="modal-last-active" class="text-sm">Just now</span>
+                </div>
+                <div class="flex items-center justify-between mb-4">
+                    <span class="text-sm font-medium">Shared Servers</span>
+                    <span id="modal-shared-servers" class="text-sm">2</span>
+                </div>
+                <div class="flex space-x-2">
+                    <button id="modal-message-button" class="flex-1 py-2 bg-primary text-white rounded-lg text-sm">
+                        <i class="fas fa-comment mr-2"></i> Message
+                    </button>
+                    <button id="modal-add-friend-button" class="hidden flex-1 py-2 bg-success text-white rounded-lg text-sm">
+                        <i class="fas fa-user-plus mr-2"></i> Add Friend
+                    </button>
+                    <button id="modal-accept-friend-button" class="hidden flex-1 py-2 bg-success text-white rounded-lg text-sm">
+                        <i class="fas fa-check mr-2"></i> Accept
+                    </button>
+                    <button id="modal-block-button" class="flex-1 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg text-sm">
+                        <i class="fas fa-ban mr-2"></i> Block
+                    </button>
+                </div>
+                <!-- Admin controls (only visible to admins) -->
+                <div id="admin-controls" class="admin-controls hidden">
+                    <h4 class="text-sm font-medium mb-2">Admin Controls</h4>
+                    <div class="flex flex-wrap gap-2">
+                        <button id="admin-grant-button" class="admin-button admin-success">
+                            <i class="fas fa-user-shield mr-1"></i> Grant Admin
+                        </button>
+                        <button id="admin-revoke-button" class="admin-button admin-danger hidden">
+                            <i class="fas fa-user-slash mr-1"></i> Revoke Admin
+                        </button>
+                        <button id="admin-kick-button" class="admin-button admin-danger">
+                            <i class="fas fa-user-minus mr-1"></i> Kick
+                        </button>
+                        <button id="admin-ban-button" class="admin-button admin-danger">
+                            <i class="fas fa-ban mr-1"></i> Ban
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add friend modal -->
+    <div id="add-friend-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold">Add Friend</h3>
+                <button class="close-modal text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">You can add friends using their username.</p>
+            <div class="mb-4">
+                <input type="text" id="add-friend-username" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-dark-card text-light-text dark:text-dark-text focus:outline-none focus:ring-2 focus:ring-primary text-base" placeholder="@username">
+                <div id="add-friend-error" class="text-danger text-sm mt-1 hidden"></div>
+            </div>
+            <button id="add-friend-submit" class="w-full bg-primary hover:bg-opacity-90 text-white font-medium py-2 px-4 rounded-lg transition-all">Send Friend Request</button>
+        </div>
+    </div>
+
+    <!-- New DM modal -->
+    <div id="new-dm-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold">New Direct Message</h3>
+                <button class="close-modal text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Start a conversation with a friend</p>
+            <div class="mb-4">
+                <input type="text" id="new-dm-username" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-dark-card text-light-text dark:text-dark-text focus:outline-none focus:ring-2 focus:ring-primary text-base" placeholder="@username">
+                <div id="new-dm-error" class="text-danger text-sm mt-1 hidden"></div>
+            </div>
+            <button id="new-dm-submit" class="w-full bg-primary hover:bg-opacity-90 text-white font-medium py-2 px-4 rounded-lg transition-all">Start Chat</button>
+        </div>
+    </div>
+
+    <!-- Server creation modal -->
+    <div id="server-create-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold">Create Server</h3>
+                <button class="close-modal text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="server-form">
+                <div class="mb-4">
+                    <label for="server-name-input" class="block text-sm font-medium mb-1">Server Name</label>
+                    <input type="text" id="server-name-input" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-dark-card text-light-text dark:text-dark-text focus:outline-none focus:ring-2 focus:ring-primary text-base" placeholder="Awesome Server">
+                    <div id="server-name-error" class="text-danger text-sm mt-1 hidden"></div>
+                </div>
+                <div class="mb-4">
+                    <label for="server-description-input" class="block text-sm font-medium mb-1">Description (Optional)</label>
+                    <textarea id="server-description-input" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-dark-card text-light-text dark:text-dark-text focus:outline-none focus:ring-2 focus:ring-primary text-base" placeholder="What's this server about?"></textarea>
+                </div>
+                <button id="server-create-submit" class="w-full bg-primary hover:bg-opacity-90 text-white font-medium py-2 px-4 rounded-lg transition-all">Create Server</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Server invite modal -->
+    <div id="server-invite-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold">Invite to Server</h3>
+                <button class="close-modal text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Invite others to join this server with the link below.</p>
+            <div class="mb-4">
+                <div class="flex items-center">
+                    <input type="text" id="server-invite-link" class="flex-1 p-3 border border-gray-300 dark:border-gray-600 rounded-l-lg bg-white dark:bg-dark-card text-light-text dark:text-dark-text focus:outline-none focus:ring-2 focus:ring-primary text-base" readonly>
+                    <button id="copy-invite-link" class="bg-primary text-white p-3 rounded-r-lg hover:bg-opacity-90">
+                        <i class="fas fa-copy"></i>
+                    </button>
+                </div>
+                <div id="invite-copied" class="text-success text-sm mt-1 hidden">Invite link copied!</div>
+            </div>
+            <div class="flex space-x-2">
+                <button id="generate-new-link" class="flex-1 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg text-sm">
+                    <i class="fas fa-sync-alt mr-2"></i> New Link
+                </button>
+                <button id="revoke-all-links" class="flex-1 py-2 bg-danger text-white rounded-lg text-sm">
+                    <i class="fas fa-trash-alt mr-2"></i> Revoke All
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Server settings modal -->
+    <div id="server-settings-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold">Server Settings</h3>
+                <button class="close-modal text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="server-form">
+                <div class="mb-4">
+                    <label for="server-settings-name" class="block text-sm font-medium mb-1">Server Name</label>
+                    <input type="text" id="server-settings-name" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-dark-card text-light-text dark:text-dark-text focus:outline-none focus:ring-2 focus:ring-primary text-base">
+                </div>
+                <div class="mb-4">
+                    <label for="server-settings-description" class="block text-sm font-medium mb-1">Description</label>
+                    <textarea id="server-settings-description" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-dark-card text-light-text dark:text-dark-text focus:outline-none focus:ring-2 focus:ring-primary text-base"></textarea>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium mb-1">Server Icon</label>
+                    <div class="flex items-center">
+                        <div id="server-icon-preview" class="w-16 h-16 rounded-lg bg-secondary flex items-center justify-center text-white text-xl mr-4">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <button id="change-server-icon" class="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-lg">
+                            Change Icon
+                        </button>
+                    </div>
+                </div>
+                <div class="flex space-x-2">
+                    <button id="save-server-settings" class="flex-1 py-2 bg-primary text-white rounded-lg">
+                        Save Changes
+                    </button>
+                    <button id="delete-server" class="flex-1 py-2 bg-danger text-white rounded-lg">
+                        Delete Server
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Profile modal -->
+    <div id="profile-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold">Your Profile</h3>
+                <button class="close-modal text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="flex flex-col items-center mb-6">
+                <div id="user-avatar" class="w-24 h-24 rounded-full bg-primary flex items-center justify-center text-white text-2xl mb-3">
+                    U
+                </div>
+                <h4 id="user-name" class="text-xl font-bold mb-1">User</h4>
+                <p id="user-username" class="text-sm text-gray-500 dark:text-gray-400">@username</p>
+                <p id="user-email" class="text-sm text-gray-500 dark:text-gray-400">user@example.com</p>
+            </div>
+            
+            <div class="border-t border-gray-200 dark:border-gray-700 pt-4">
+                <h4 class="font-medium mb-3">Settings</h4>
+                
+                <!-- Theme setting -->
+                <div class="mb-4">
+                    <label class="block text-sm font-medium mb-2">Theme</label>
+                    <div class="flex space-x-2">
+                        <button id="theme-light" class="flex-1 py-2 px-3 border border-gray-300 dark:border-gray-600 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-sun mr-2"></i> Light
+                        </button>
+                        <button id="theme-dark" class="flex-1 py-2 px-3 border border-gray-300 dark:border-gray-600 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-moon mr-2"></i> Dark
+                        </button>
+                        <button id="theme-system" class="flex-1 py-2 px-3 border border-gray-300 dark:border-gray-600 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-desktop mr-2"></i> System
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Status setting -->
+                <div class="mb-4">
+                    <label class="block text-sm font-medium mb-2">Status</label>
+                    <div class="flex flex-wrap gap-2">
+                        <button id="status-online" class="flex-1 py-2 px-3 border border-gray-300 dark:border-gray-600 rounded-lg flex items-center">
+                            <span class="w-3 h-3 rounded-full bg-success mr-2"></span> Online
+                        </button>
+                        <button id="status-idle" class="flex-1 py-2 px-3 border border-gray-300 dark:border-gray-600 rounded-lg flex items-center">
+                            <span class="w-3 h-3 rounded-full bg-warning mr-2"></span> Idle
+                        </button>
+                        <button id="status-dnd" class="flex-1 py-2 px-3 border border-gray-300 dark:border-gray-600 rounded-lg flex items-center">
+                            <span class="w-3 h-3 rounded-full bg-danger mr-2"></span> Do Not Disturb
+                        </button>
+                        <button id="status-invisible" class="flex-1 py-2 px-3 border border-gray-300 dark:border-gray-600 rounded-lg flex items-center">
+                            <span class="w-3 h-3 rounded-full bg-gray-400 mr-2"></span> Invisible
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pt-4 border-t border-gray-200 dark:border-gray-700">
+                <button id="logout-button" class="w-full py-2 px-4 bg-danger text-white rounded-lg">
+                    <i class="fas fa-sign-out-alt mr-2"></i> Log Out
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast notification -->
+    <div id="toast" class="toast">
+        <div class="flex items-center">
+            <i id="toast-icon" class="fas fa-info-circle mr-2"></i>
+            <span id="toast-message">Notification message</span>
+        </div>
+    </div>
+
+    <script>
+        // ====== DATA STRUCTURES AND REAL-TIME FUNCTIONALITY ======
+        
+        // User data with admin support
+        const users = [
+            { 
+                id: 'admin1', 
+                name: 'Admin User', 
+                username: 'admin', 
+                email: 'admin@example.com', 
+                password: 'admin123', 
+                status: 'online', 
+                avatarColor: '#5D5CDE', 
+                lastActive: Date.now(),
+                isAdmin: true,
+                banned: false
+            },
+            { 
+                id: 'user2', 
+                name: 'John Smith', 
+                username: 'johnsmith', 
+                email: 'john@example.com', 
+                password: 'password123', 
+                status: 'online', 
+                avatarColor: '#9C27B0', 
+                lastActive: Date.now(),
+                isAdmin: false,
+                banned: false
+            },
+            { 
+                id: 'user3', 
+                name: 'Sarah Davis', 
+                username: 'sarahd', 
+                email: 'sarah@example.com', 
+                password: 'secure123', 
+                status: 'online', 
+                avatarColor: '#E91E63', 
+                lastActive: Date.now(),
+                isAdmin: false,
+                banned: false
+            }
+        ];
+
+        // Server data with admin support
+        let servers = [
+            { 
+                id: 'general',
+                name: 'General Community',
+                description: 'A place for everyone to chat about anything',
+                icon: 'users',
+                owner: 'admin1',
+                members: ['admin1', 'user2', 'user3'],
+                admins: ['admin1'],
+                channels: [
+                    { id: 'general-chat', name: 'general-chat', type: 'text' },
+                    { id: 'introductions', name: 'introductions', type: 'text' }
+                ],
+                invites: ['invite-general-123']
+            }
+        ];
+
+        // Messages data
+        const messages = {
+            'dm-admin1-user2': [
+                { id: 'msg1', sender: 'user2', content: 'Hey admin, how are you?', timestamp: Date.now() - 1000 * 60 * 15 },
+                { id: 'msg2', sender: 'admin1', content: "I'm good, thanks for asking!", timestamp: Date.now() - 1000 * 60 * 14 }
+            ],
+            'general-chat': [
+                { id: 'msg3', sender: 'admin1', content: 'Welcome everyone to the server!', timestamp: Date.now() - 1000 * 60 * 60 * 2 },
+                { id: 'msg4', sender: 'user2', content: 'Thanks for having us!', timestamp: Date.now() - 1000 * 60 * 60 * 2 + 1000 * 60 * 5 }
+            ]
+        };
+
+        // Friend relationships
+        let friendships = [
+            { user1: 'admin1', user2: 'user2', status: 'friends' },
+            { user1: 'admin1', user2: 'user3', status: 'pending' }
+        ];
+
+        // Current session data
+        let currentUser = null;
+        let currentServer = null;
+        let currentChannel = null;
+        let currentChat = null;
+        let themePreference = 'system';
+        let callActive = false;
+        let callPeer = null;
+        let callType = null; // 'voice' or 'video'
+        let callMuted = false;
+        let callVideoOff = false;
+
+        // Simulated WebSocket connection for real-time updates
+        class WebSocketSimulator {
+            constructor() {
+                this.listeners = {
+                    message: [],
+                    open: []
+                };
+                this.connected = false;
+            }
+
+            connect() {
+                setTimeout(() => {
+                    this.connected = true;
+                    this.listeners.open.forEach(callback => callback());
+                }, 500);
+            }
+
+            send(data) {
+                // Simulate server response
+                setTimeout(() => {
+                    if (typeof data === 'string') {
+                        data = JSON.parse(data);
+                    }
+                    
+                    // Handle different message types
+                    if (data.type === 'friend_request') {
+                        this.handleFriendRequest(data);
+                    } else if (data.type === 'message') {
+                        this.handleNewMessage(data);
+                    } else if (data.type === 'call') {
+                        this.handleCall(data);
+                    } else if (data.type === 'server_update') {
+                        this.handleServerUpdate(data);
+                    }
+                }, 300);
+            }
+
+            handleFriendRequest(data) {
+                const { from, to } = data;
+                const response = {
+                    type: 'friend_request',
+                    from: to,
+                    to: from,
+                    status: 'pending'
+                };
+                
+                // Add to friendships if not already there
+                const exists = friendships.some(f => 
+                    (f.user1 === from && f.user2 === to) || 
+                    (f.user1 === to && f.user2 === from)
+                );
+                
+                if (!exists) {
+                    friendships.push({
+                        user1: from,
+                        user2: to,
+                        status: 'pending'
+                    });
+                }
+                
+                // Notify the recipient if they're the current user
+                if (currentUser && currentUser.id === to) {
+                    showToast(`New friend request from ${getUserById(from).name}`, 'info');
+                    loadFriendRequests();
+                }
+            }
+
+            handleNewMessage(data) {
+                const { chatId, sender, content } = data;
+                
+                // Add message to storage
+                if (!messages[chatId]) {
+                    messages[chatId] = [];
+                }
+                
+                messages[chatId].push({
+                    id: `msg-${Date.now()}`,
+                    sender,
+                    content,
+                    timestamp: Date.now()
+                });
+                
+                // Update UI if this chat is active
+                if (currentChat === chatId) {
+                    loadChatMessages(chatId);
+                }
+                
+                // Update chat list if this is a DM
+                if (chatId.startsWith('dm-')) {
+                    loadDirectMessages();
+                }
+                
+                // Notify user if they're not in the chat
+                if (currentChat !== chatId && currentUser && sender !== currentUser.id) {
+                    const chatName = getChatName(chatId);
+                    showToast(`New message in ${chatName}`, 'info');
+                }
+            }
+
+            handleCall(data) {
+                const { from, to, type, action } = data;
+                
+                if (action === 'start') {
+                    // Incoming call
+                    if (currentUser && currentUser.id === to && !callActive) {
+                        showIncomingCall(from, type);
+                    }
+                } else if (action === 'accept') {
+                    // Call accepted
+                    if (currentUser && currentUser.id === from && callActive && callPeer === to) {
+                        startCall(to, type, true);
+                    }
+                } else if (action === 'reject') {
+                    // Call rejected
+                    if (currentUser && currentUser.id === from && callActive && callPeer === to) {
+                        endCall();
+                        showToast('Call declined', 'info');
+                    }
+                } else if (action === 'end') {
+                    // Call ended
+                    if (currentUser && ((currentUser.id === from && callPeer === to) || (currentUser.id === to && callPeer === from))) {
+                        endCall();
+                        showToast('Call ended', 'info');
+                    }
+                }
+            }
+
+            handleServerUpdate(data) {
+                const { serverId, action, data: updateData } = data;
+                
+                if (action === 'create') {
+                    servers.push(updateData);
+                    if (currentUser) {
+                        loadServers();
+                    }
+                } else if (action === 'update') {
+                    const index = servers.findIndex(s => s.id === serverId);
+                    if (index !== -1) {
+                        servers[index] = { ...servers[index], ...updateData };
+                        if (currentServer === serverId) {
+                            updateServerInfo(serverId);
+                        }
+                    }
+                } else if (action === 'delete') {
+                    servers = servers.filter(s => s.id !== serverId);
+                    if (currentServer === serverId) {
+                        currentServer = null;
+                        currentChannel = null;
+                        currentChat = null;
+                        loadServers();
+                        showChat();
+                    }
+                }
+            }
+
+            on(event, callback) {
+                if (this.listeners[event]) {
+                    this.listeners[event].push(callback);
+                }
+            }
+        }
+
+        const ws = new WebSocketSimulator();
+
+        // Helper functions
+        function getUserById(userId) {
+            return users.find(user => user.id === userId);
+        }
+
+        function getUserByUsername(username) {
+            return users.find(user => user.username === username);
+        }
+
+        function getServerById(serverId) {
+            return servers.find(server => server.id === serverId);
+        }
+
+        function getDmChatId(user1Id, user2Id) {
+            const ids = [user1Id, user2Id].sort();
+            return `dm-${ids[0]}-${ids[1]}`;
+        }
+
+        function getFriendshipStatus(userId1, userId2) {
+            const friendship = friendships.find(f => 
+                (f.user1 === userId1 && f.user2 === userId2) || 
+                (f.user1 === userId2 && f.user2 === userId1)
+            );
+            
+            if (!friendship) return 'none';
+            if (friendship.status === 'friends') return 'friends';
+            
+            if (friendship.user1 === userId1 && friendship.status === 'pending') {
+                return 'sent';
+            } else if (friendship.user2 === userId1 && friendship.status === 'pending') {
+                return 'received';
+            }
+            
+            return 'none';
+        }
+
+        function getDirectMessagesList(userId) {
+            const friendshipsList = friendships.filter(f => 
+                ((f.user1 === userId || f.user2 === userId) && f.status === 'friends')
+            );
+            
+            return friendshipsList.map(f => {
+                const otherUserId = f.user1 === userId ? f.user2 : f.user1;
+                const otherUser = getUserById(otherUserId);
+                const chatId = getDmChatId(userId, otherUserId);
+                
+                const messagesList = messages[chatId] || [];
+                const lastMessage = messagesList.length > 0 ? messagesList[messagesList.length - 1] : null;
+                
+                return {
+                    id: chatId,
+                    type: 'dm',
+                    user: otherUser,
+                    lastMessage: lastMessage,
+                    unreadCount: 0 // In a real app, this would track unread messages
+                };
+            });
+        }
+
+        function getPendingFriendRequests(userId) {
+            return friendships.filter(f => 
+                f.user2 === userId && f.status === 'pending'
+            ).map(f => {
+                return {
+                    id: f.user1,
+                    user: getUserById(f.user1),
+                    timestamp: Date.now() - Math.floor(Math.random() * 1000 * 60 * 60 * 24 * 7)
+                };
+            });
+        }
+
+        function getChatName(chatId) {
+            if (chatId.startsWith('dm-')) {
+                const userIds = chatId.replace('dm-', '').split('-');
+                const otherUserId = userIds[0] === currentUser.id ? userIds[1] : userIds[0];
+                const user = getUserById(otherUserId);
+                return user ? user.name : 'Unknown';
+            } else {
+                const server = servers.find(s => 
+                    s.channels.some(c => c.id === chatId)
+                );
+                if (server) {
+                    const channel = server.channels.find(c => c.id === chatId);
+                    return `${server.name} - ${channel.name}`;
+                }
+                return 'Unknown';
+            }
+        }
+
+        function formatTimestamp(timestamp) {
+            const now = new Date();
+            const date = new Date(timestamp);
+            
+            if (date.toDateString() === now.toDateString()) {
+                return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            }
+            
+            const yesterday = new Date(now);
+            yesterday.setDate(yesterday.getDate() - 1);
+            if (date.toDateString() === yesterday.toDateString()) {
+                return 'Yesterday';
+            }
+            
+            const oneWeekAgo = new Date(now);
+            oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+            if (date > oneWeekAgo) {
+                return date.toLocaleDateString([], { weekday: 'long' });
+            }
+            
+            return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+        }
+
+        function formatRelativeTime(timestamp) {
+            const now = Date.now();
+            const diff = now - timestamp;
+            
+            if (diff < 1000 * 60) {
+                return 'Just now';
+            } else if (diff < 1000 * 60 * 60) {
+                const minutes = Math.floor(diff / (1000 * 60));
+                return `${minutes} ${minutes === 1 ? 'minute' : 'minutes'} ago`;
+            } else if (diff < 1000 * 60 * 60 * 24) {
+                const hours = Math.floor(diff / (1000 * 60 * 60));
+                return `${hours} ${hours === 1 ? 'hour' : 'hours'} ago`;
+            } else if (diff < 1000 * 60 * 60 * 24 * 7) {
+                const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+                return `${days} ${days === 1 ? 'day' : 'days'} ago`;
+            } else {
+                return formatTimestamp(timestamp);
+            }
+        }
+
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toast-message');
+            const toastIcon = document.getElementById('toast-icon');
+            
+            toastMessage.textContent = message;
+            
+            switch (type) {
+                case 'success':
+                    toastIcon.className = 'fas fa-check-circle mr-2 text-success';
+                    break;
+                case 'error':
+                    toastIcon.className = 'fas fa-exclamation-circle mr-2 text-danger';
+                    break;
+                case 'warning':
+                    toastIcon.className = 'fas fa-exclamation-triangle mr-2 text-warning';
+                    break;
+                default:
+                    toastIcon.className = 'fas fa-info-circle mr-2 text-primary';
+            }
+            
+            toast.classList.add('show');
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        function applyTheme(preference) {
+            themePreference = preference;
+            
+            if (preference === 'dark') {
+                document.documentElement.classList.add('dark');
+            } else if (preference === 'light') {
+                document.documentElement.classList.remove('dark');
+            } else {
+                if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                    document.documentElement.classList.add('dark');
+                } else {
+                    document.documentElement.classList.remove('dark');
+                }
+            }
+            
+            // Save preference for current user
+            if (currentUser) {
+                currentUser.themePreference = preference;
+            }
+        }
+
+        function generateAvatar(user, size = 'md') {
+            const sizeClasses = {
+                sm: 'w-8 h-8 text-xs',
+                md: 'w-10 h-10 text-sm',
+                lg: 'w-12 h-12 text-base',
+                xl: 'w-16 h-16 text-lg'
+            };
+            
+            const initials = user.name.split(' ').map(n => n[0]).join('').toUpperCase();
+            return `<div class="${sizeClasses[size]} rounded-full flex items-center justify-center text-white font-medium" style="background-color: ${user.avatarColor || '#5D5CDE'}">${initials}</div>`;
+        }
+
+        function getStatusIndicator(status) {
+            let bgColor = '';
+            let animation = '';
+            
+            switch (status) {
+                case 'online':
+                    bgColor = 'bg-success';
+                    break;
+                case 'idle':
+                    bgColor = 'bg-warning';
+                    break;
+                case 'dnd':
+                    bgColor = 'bg-danger';
+                    break;
+                default:
+                    bgColor = 'bg-gray-400';
+            }
+            
+            if (status === 'online') {
+                animation = 'blinking';
+            }
+            
+            return `<div class="absolute bottom-0 right-0 w-3 h-3 ${bgColor} ${animation} rounded-full border-2 border-white dark:border-dark-sidebar"></div>`;
+        }
+
+        // ====== UI FUNCTIONS ======
+        
+        function showScreen(screenId) {
+            document.getElementById('auth-container').classList.add('hidden');
+            document.getElementById('chat-container').classList.add('hidden');
+            document.getElementById(screenId).classList.remove('hidden');
+        }
+        
+        function showChat(chatId = null) {
+            const welcomeScreen = document.getElementById('welcome-screen');
+            const messagesContainer = document.getElementById('messages-container');
+            const messageInputContainer = document.getElementById('message-input-container');
+            
+            if (chatId) {
+                welcomeScreen.classList.add('hidden');
+                messagesContainer.classList.remove('hidden');
+                messageInputContainer.classList.remove('hidden');
+                loadChatMessages(chatId);
+            } else {
+                welcomeScreen.classList.remove('hidden');
+                messagesContainer.classList.add('hidden');
+                messageInputContainer.classList.add('hidden');
+            }
+        }
+        
+        function toggleMembersList(show) {
+            const channelsListContainer = document.getElementById('chats-list-container');
+            const serverMembersContainer = document.getElementById('server-members-container');
+            
+            if (show) {
+                channelsListContainer.classList.add('hidden');
+                serverMembersContainer.classList.remove('hidden');
+                loadServerMembers();
+            } else {
+                channelsListContainer.classList.remove('hidden');
+                serverMembersContainer.classList.add('hidden');
+            }
+        }
+        
+        function loadServerMembers() {
+            if (!currentServer) return;
+            
+            const server = getServerById(currentServer);
+            if (!server) return;
+            
+            const memberList = document.getElementById('member-list');
+            const memberCount = document.getElementById('member-count');
+            
+            memberCount.textContent = server.members.length;
+            memberList.innerHTML = '';
+            
+            server.members.forEach(memberId => {
+                const user = getUserById(memberId);
+                if (!user) return;
+                
+                const isAdmin = server.admins.includes(memberId);
+                
+                const memberItem = document.createElement('div');
+                memberItem.className = 'flex items-center p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-dark-card/50 cursor-pointer';
+                memberItem.innerHTML = `
+                    <div class="relative">
+                        ${generateAvatar(user)}
+                        ${getStatusIndicator(user.status)}
+                    </div>
+                    <div class="ml-3 flex-1 overflow-hidden">
+                        <div class="flex justify-between items-center">
+                            <h3 class="font-medium text-light-text dark:text-dark-text">${user.name} ${isAdmin ? '<span class="text-xs bg-primary text-white px-1 rounded">Admin</span>' : ''}</h3>
+                            ${user.status === 'online' ? '<span class="text-xs text-success">Online</span>' : ''}
+                        </div>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">@${user.username}</p>
+                    </div>
+                `;
+                
+                memberItem.addEventListener('click', () => {
+                    showMemberInfo(user);
+                });
+                
+                memberList.appendChild(memberItem);
+            });
+        }
+        
+        function showMemberInfo(user) {
+            const modal = document.getElementById('member-info-modal');
+            const modalAvatar = document.getElementById('modal-avatar');
+            const modalName = document.getElementById('modal-name');
+            const modalStatus = document.getElementById('modal-status');
+            const modalUsername = document.getElementById('modal-username');
+            const modalMemberSince = document.getElementById('modal-member-since');
+            const modalLastActive = document.getElementById('modal-last-active');
+            const modalSharedServers = document.getElementById('modal-shared-servers');
+            const modalMessageButton = document.getElementById('modal-message-button');
+            const modalAddFriendButton = document.getElementById('modal-add-friend-button');
+            const modalAcceptFriendButton = document.getElementById('modal-accept-friend-button');
+            const adminControls = document.getElementById('admin-controls');
+            const adminGrantButton = document.getElementById('admin-grant-button');
+            const adminRevokeButton = document.getElementById('admin-revoke-button');
+            
+            modalAvatar.style.backgroundColor = user.avatarColor;
+            modalAvatar.innerHTML = user.name.split(' ').map(n => n[0]).join('').toUpperCase();
+            modalName.textContent = user.name;
+            modalUsername.textContent = `@${user.username}`;
+            
+            modalStatus.textContent = user.status.charAt(0).toUpperCase() + user.status.slice(1);
+            
+            const joinDate = new Date();
+            joinDate.setMonth(joinDate.getMonth() - Math.floor(Math.random() * 12));
+            modalMemberSince.textContent = joinDate.toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' });
+            
+            modalLastActive.textContent = formatRelativeTime(user.lastActive);
+            
+            let sharedServerCount = 0;
+            servers.forEach(server => {
+                if (server.members.includes(currentUser.id) && server.members.includes(user.id)) {
+                    sharedServerCount++;
+                }
+            });
+            modalSharedServers.textContent = sharedServerCount;
+            
+            const friendStatus = getFriendshipStatus(currentUser.id, user.id);
+            
+            modalMessageButton.classList.remove('hidden');
+            modalAddFriendButton.classList.add('hidden');
+            modalAcceptFriendButton.classList.add('hidden');
+            
+            if (friendStatus === 'none') {
+                modalAddFriendButton.classList.remove('hidden');
+                
+                modalAddFriendButton.onclick = () => {
+                    sendFriendRequest(currentUser.id, user.id);
+                    modal.classList.add('hidden');
+                    showToast(`Friend request sent to ${user.name}`, 'success');
+                };
+            } else if (friendStatus === 'received') {
+                modalAcceptFriendButton.classList.remove('hidden');
+                
+                modalAcceptFriendButton.onclick = () => {
+                    acceptFriendRequest(user.id, currentUser.id);
+                    modal.classList.add('hidden');
+                    showToast(`You are now friends with ${user.name}`, 'success');
+                };
+            }
+            
+            modalMessageButton.onclick = () => {
+                startDirectMessage(user.id);
+                modal.classList.add('hidden');
+            };
+            
+            // Show admin controls if current user is admin of this server
+            if (currentServer && currentUser && currentUser.isAdmin) {
+                const server = getServerById(currentServer);
+                if (server && server.admins.includes(currentUser.id)) {
+                    adminControls.classList.remove('hidden');
+                    
+                    const isUserAdmin = server.admins.includes(user.id);
+                    adminGrantButton.classList.toggle('hidden', isUserAdmin);
+                    adminRevokeButton.classList.toggle('hidden', !isUserAdmin);
+                    
+                    adminGrantButton.onclick = () => {
+                        grantAdminRole(currentServer, user.id);
+                        modal.classList.add('hidden');
+                        showToast(`${user.name} is now an admin`, 'success');
+                    };
+                    
+                    adminRevokeButton.onclick = () => {
+                        revokeAdminRole(currentServer, user.id);
+                        modal.classList.add('hidden');
+                        showToast(`${user.name} is no longer an admin`, 'info');
+                    };
+                    
+                    document.getElementById('admin-kick-button').onclick = () => {
+                        kickUser(currentServer, user.id);
+                        modal.classList.add('hidden');
+                        showToast(`${user.name} has been kicked`, 'info');
+                    };
+                    
+                    document.getElementById('admin-ban-button').onclick = () => {
+                        banUser(user.id);
+                        modal.classList.add('hidden');
+                        showToast(`${user.name} has been banned`, 'warning');
+                    };
+                } else {
+                    adminControls.classList.add('hidden');
+                }
+            } else {
+                adminControls.classList.add('hidden');
+            }
+            
+            modal.classList.remove('hidden');
+        }
+        
+        function loadFriendRequests() {
+            if (!currentUser) return;
+            
+            const requestsList = document.getElementById('friend-requests-list');
+            const requestsCount = document.getElementById('friend-requests-count');
+            
+            const pendingRequests = getPendingFriendRequests(currentUser.id);
+            
+            if (pendingRequests.length > 0) {
+                requestsCount.textContent = pendingRequests.length;
+                requestsCount.classList.remove('hidden');
+            } else {
+                requestsCount.classList.add('hidden');
+            }
+            
+            if (pendingRequests.length === 0) {
+                requestsList.classList.add('hidden');
+                return;
+            }
+            
+            requestsList.classList.remove('hidden');
+            requestsList.innerHTML = '';
+            
+            pendingRequests.forEach(request => {
+                const requestItem = document.createElement('div');
+                requestItem.className = 'flex items-center justify-between p-2 mb-2 bg-gray-50 dark:bg-gray-800 rounded-lg';
+                requestItem.innerHTML = `
+                    <div class="flex items-center">
+                        ${generateAvatar(request.user, 'sm')}
+                        <div class="ml-2">
+                            <div class="font-medium text-sm">${request.user.name}</div>
+                            <div class="text-xs text-gray-500 dark:text-gray-400">@${request.user.username}</div>
+                        </div>
+                    </div>
+                    <div class="flex space-x-1">
+                        <button class="accept-request p-1.5 bg-success text-white rounded-full">
+                            <i class="fas fa-check text-xs"></i>
+                        </button>
+                        <button class="reject-request p-1.5 bg-danger text-white rounded-full">
+                            <i class="fas fa-times text-xs"></i>
+                        </button>
+                    </div>
+                `;
+                
+                requestItem.querySelector('.accept-request').addEventListener('click', () => {
+                    acceptFriendRequest(request.id, currentUser.id);
+                });
+                
+                requestItem.querySelector('.reject-request').addEventListener('click', () => {
+                    rejectFriendRequest(request.id, currentUser.id);
+                });
+                
+                requestsList.appendChild(requestItem);
+            });
+        }
+        
+        function loadDirectMessages() {
+            if (!currentUser) return;
+            
+            const dmList = document.getElementById('dm-list');
+            const conversations = getDirectMessagesList(currentUser.id);
+            
+            dmList.innerHTML = '';
+            
+            conversations.forEach(convo => {
+                const isActive = currentChat === convo.id;
+                
+                const convoItem = document.createElement('div');
+                convoItem.className = `chat-item flex items-center p-2 rounded-lg cursor-pointer ${isActive ? 'bg-blue-50 dark:bg-blue-900/20' : 'hover:bg-gray-100 dark:hover:bg-dark-card/50'}`;
+                convoItem.dataset.chatId = convo.id;
+                convoItem.dataset.chatType = 'dm';
+                convoItem.dataset.userId = convo.user.id;
+                
+                let lastMessageContent = 'Start a conversation...';
+                let lastMessageTime = '';
+                
+                if (convo.lastMessage) {
+                    const sender = convo.lastMessage.sender === currentUser.id ? 'You: ' : '';
+                    lastMessageContent = `${sender}${convo.lastMessage.content}`;
+                    lastMessageTime = formatTimestamp(convo.lastMessage.timestamp);
+                }
+                
+                convoItem.innerHTML = `
+                    <div class="relative">
+                        ${generateAvatar(convo.user)}
+                        ${getStatusIndicator(convo.user.status)}
+                    </div>
+                    <div class="ml-3 flex-1 overflow-hidden">
+                        <div class="flex justify-between items-center">
+                            <h3 class="font-medium text-light-text dark:text-dark-text">${convo.user.name}</h3>
+                            <span class="text-xs text-gray-500 dark:text-gray-400">${lastMessageTime}</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <p class="text-sm text-gray-600 dark:text-gray-300 truncate">${lastMessageContent}</p>
+                        </div>
+                    </div>
+                `;
+                
+                convoItem.addEventListener('click', () => {
+                    setActiveChat(convo.id, 'dm', convo.user.id);
+                });
+                
+                dmList.appendChild(convoItem);
+            });
+        }
+        
+        function loadChannelList(serverId) {
+            if (!serverId) return;
+            
+            const server = getServerById(serverId);
+            if (!server) return;
+            
+            const channelList = document.getElementById('channel-list');
+            channelList.innerHTML = '';
+            
+            server.channels.forEach(channel => {
+                const isActive = currentChannel === channel.id;
+                
+                const channelItem = document.createElement('div');
+                channelItem.className = `chat-item flex items-center p-2 rounded-lg cursor-pointer ${isActive ? 'bg-blue-50 dark:bg-blue-900/20' : 'hover:bg-gray-100 dark:hover:bg-dark-card/50'}`;
+                channelItem.dataset.channelId = channel.id;
+                channelItem.dataset.serverId = serverId;
+                
+                let icon = 'hashtag';
+                if (channel.type === 'voice') icon = 'microphone';
+                
+                let lastMessage = '';
+                let lastMessageTime = '';
+                
+                if (messages[channel.id] && messages[channel.id].length > 0) {
+                    const lastMsg = messages[channel.id][messages[channel.id].length - 1];
+                    const sender = getUserById(lastMsg.sender);
+                    lastMessage = `${sender ? sender.name.split(' ')[0] : 'User'}: ${lastMsg.content}`;
+                    lastMessageTime = formatTimestamp(lastMsg.timestamp);
+                }
+                
+                channelItem.innerHTML = `
+                    <div class="w-12 h-12 rounded-lg bg-secondary flex items-center justify-center text-white">
+                        <i class="fas fa-${icon}"></i>
+                    </div>
+                    <div class="ml-3 flex-1 overflow-hidden">
+                        <div class="flex justify-between items-center">
+                            <h3 class="font-medium text-light-text dark:text-dark-text">${channel.name}</h3>
+                            <span class="text-xs text-gray-500 dark:text-gray-400">${lastMessageTime}</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <p class="text-sm text-gray-600 dark:text-gray-300 truncate">${lastMessage}</p>
+                        </div>
+                    </div>
+                `;
+                
+                channelItem.addEventListener('click', () => {
+                    setActiveChat(channel.id, 'channel', null, serverId);
+                });
+                
+                channelList.appendChild(channelItem);
+            });
+        }
+        
+        function loadServers() {
+            const serverList = document.querySelector('.server-list');
+            serverList.innerHTML = '';
+            
+            servers.forEach(server => {
+                if (server.members.includes(currentUser.id)) {
+                    const serverIcon = document.createElement('div');
+                    serverIcon.className = `server-icon w-12 h-12 rounded-2xl ${currentServer === server.id ? 'bg-primary' : 'bg-gray-700'} hover:bg-primary transition-all hover:rounded-xl cursor-pointer flex items-center justify-center text-white`;
+                    serverIcon.dataset.serverId = server.id;
+                    serverIcon.innerHTML = `<i class="fas fa-${server.icon || 'users'}"></i>`;
+                    
+                    serverIcon.addEventListener('click', () => {
+                        switchServer(server.id);
+                    });
+                    
+                    serverList.appendChild(serverIcon);
+                }
+            });
+        }
+        
+        function setActiveChat(chatId, type, userId = null, serverId = null) {
+            currentChat = chatId;
+            
+            if (type === 'channel') {
+                currentChannel = chatId;
+                if (serverId) currentServer = serverId;
+            } else {
+                currentChannel = null;
+            }
+            
+            document.querySelectorAll('.chat-item').forEach(item => {
+                item.classList.remove('bg-blue-50', 'dark:bg-blue-900/20');
+                item.classList.add('hover:bg-gray-100', 'dark:hover:bg-dark-card/50');
+            });
+            
+            const activeChat = document.querySelector(`[data-chat-id="${chatId}"], [data-channel-id="${chatId}"]`);
+            if (activeChat) {
+                activeChat.classList.add('bg-blue-50', 'dark:bg-blue-900/20');
+                activeChat.classList.remove('hover:bg-gray-100', 'dark:hover:bg-dark-card/50');
+            }
+            
+            updateChatHeader(type, userId, chatId);
+            showChat(chatId);
+        }
+        
+        function updateChatHeader(type, userId = null, channelId = null) {
+            const chatAvatar = document.getElementById('chat-avatar');
+            const chatName = document.getElementById('chat-name');
+            const chatSubtitle = document.getElementById('chat-subtitle');
+            const chatStatus = document.getElementById('chat-status');
+            const chatVideoButton = document.getElementById('chat-video-button');
+            const chatCallButton = document.getElementById('chat-call-button');
+            
+            if (type === 'dm' && userId) {
+                const user = getUserById(userId);
+                if (user) {
+                    chatAvatar.style.backgroundColor = user.avatarColor;
+                    chatAvatar.innerHTML = user.name.split(' ').map(n => n[0]).join('').toUpperCase();
+                    chatName.textContent = user.name;
+                    
+                    if (user.status === 'online') {
+                        chatSubtitle.textContent = 'Online';
+                        chatStatus.className = 'absolute bottom-0 right-0 w-2.5 h-2.5 bg-success rounded-full border-2 border-white dark:border-dark-bg blinking';
+                    } else if (user.status === 'idle') {
+                        chatSubtitle.textContent = 'Idle';
+                        chatStatus.className = 'absolute bottom-0 right-0 w-2.5 h-2.5 bg-warning rounded-full border-2 border-white dark:border-dark-bg';
+                    } else if (user.status === 'dnd') {
+                        chatSubtitle.textContent = 'Do Not Disturb';
+                        chatStatus.className = 'absolute bottom-0 right-0 w-2.5 h-2.5 bg-danger rounded-full border-2 border-white dark:border-dark-bg';
+                    } else {
+                        chatSubtitle.textContent = 'Offline';
+                        chatStatus.className = 'absolute bottom-0 right-0 w-2.5 h-2.5 bg-gray-400 rounded-full border-2 border-white dark:border-dark-bg';
+                    }
+                    
+                    // Enable call buttons for DMs
+                    chatVideoButton.disabled = false;
+                    chatCallButton.disabled = false;
+                }
+            } else if (type === 'channel' && channelId) {
+                const server = getServerById(currentServer);
+                if (!server) return;
+                
+                const channel = server.channels.find(c => c.id === channelId);
+                if (!channel) return;
+                
+                chatAvatar.style.backgroundColor = '#7289DA';
+                chatAvatar.innerHTML = `<i class="fas fa-${channel.type === 'voice' ? 'microphone' : 'hashtag'}"></i>`;
+                chatName.textContent = channel.name;
+                chatSubtitle.textContent = `${server.name} | ${server.members.length} members`;
+                chatStatus.className = 'hidden';
+                
+                // Disable call buttons for channels (for now)
+                chatVideoButton.disabled = true;
+                chatCallButton.disabled = true;
+            }
+        }
+        
+        function loadChatMessages(chatId) {
+            const messagesContainer = document.getElementById('messages-container');
+            messagesContainer.innerHTML = '';
+            
+            const messagesList = messages[chatId] || [];
+            
+            if (messagesList.length === 0) {
+                messagesContainer.innerHTML = `
+                    <div class="flex flex-col items-center justify-center h-full text-center p-4">
+                        <div class="w-16 h-16 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center text-gray-500 dark:text-gray-400 mb-4">
+                            <i class="fas fa-comments text-xl"></i>
+                        </div>
+                        <h3 class="text-lg font-medium mb-1">No messages yet</h3>
+                        <p class="text-gray-500 dark:text-gray-400 max-w-xs">
+                            Be the first to send a message in this conversation!
+                        </p>
+                    </div>
+                `;
+                return;
+            }
+            
+            let currentDate = null;
+            
+            messagesList.forEach((message, index) => {
+                const messageDate = new Date(message.timestamp).toDateString();
+                
+                if (messageDate !== currentDate) {
+                    currentDate = messageDate;
+                    
+                    const dateSeparator = document.createElement('div');
+                    dateSeparator.className = 'flex items-center justify-center my-4';
+                    dateSeparator.innerHTML = `
+                        <div class="bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 text-xs px-2 py-1 rounded-full">
+                            ${formatTimestamp(message.timestamp)}
+                        </div>
+                    `;
+                    messagesContainer.appendChild(dateSeparator);
+                }
+                
+                const isCurrentUser = message.sender === currentUser.id;
+                const user = getUserById(message.sender);
+                if (!user) return;
+                
+                const messageElement = document.createElement('div');
+                messageElement.className = isCurrentUser 
+                    ? 'flex items-end justify-end space-x-2 mb-4'
+                    : 'flex items-end space-x-2 max-w-[80%] mb-4';
+                
+                const time = new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                
+                if (isCurrentUser) {
+                    messageElement.innerHTML = `
+                        <div class="message-out p-3 shadow-sm max-w-[80%]">
+                            <p class="text-light-text dark:text-dark-text">${message.content}</p>
+                            <p class="text-xs text-right mt-1 text-gray-500 dark:text-gray-400">${time}</p>
+                        </div>
+                    `;
+                } else {
+                    messageElement.innerHTML = `
+                        <div class="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-white text-xs" style="background-color: ${user.avatarColor}">
+                            ${user.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                        </div>
+                        <div class="message-in p-3 shadow-sm">
+                            <p class="text-light-text dark:text-dark-text">${message.content}</p>
+                            <p class="text-xs text-right mt-1 text-gray-500 dark:text-gray-400">${time}</p>
+                        </div>
+                    `;
+                }
+                
+                messagesContainer.appendChild(messageElement);
+            });
+            
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+        
+        function switchServer(serverId) {
+            if (!serverId) return;
+            
+            currentServer = serverId;
+            currentChannel = null;
+            currentChat = null;
+            
+            document.getElementById('server-info').classList.remove('hidden');
+            
+            const server = getServerById(serverId);
+            if (!server) return;
+            
+            document.getElementById('server-name').textContent = server.name;
+            document.getElementById('server-member-count').textContent = server.members.length;
+            
+            loadChannelList(serverId);
+            showChat();
+            document.getElementById('channels-sidebar').classList.remove('hidden');
+            
+            document.querySelectorAll('.server-icon').forEach(icon => {
+                icon.classList.remove('bg-primary');
+                icon.classList.add('bg-gray-700');
+            });
+            
+            const activeServer = document.querySelector(`[data-server-id="${serverId}"]`);
+            if (activeServer) {
+                activeServer.classList.remove('bg-gray-700');
+                activeServer.classList.add('bg-primary');
+            }
+            
+            toggleMembersList(false);
+        }
+        
+        function updateServerInfo(serverId) {
+            const server = getServerById(serverId);
+            if (!server) return;
+            
+            document.getElementById('server-name').textContent = server.name;
+            document.getElementById('server-member-count').textContent = server.members.length;
+        }
+        
+        function sendMessage() {
+            if (!currentUser || !currentChat) return;
+            
+            const input = document.getElementById('message-input');
+            const message = input.value.trim();
+            
+            if (message === '') return;
+            
+            // In a real app, this would be sent to the server via WebSocket
+            ws.send(JSON.stringify({
+                type: 'message',
+                chatId: currentChat,
+                sender: currentUser.id,
+                content: message
+            }));
+            
+            input.value = '';
+        }
+        
+        function startDirectMessage(userId) {
+            if (!currentUser || !userId) return;
+            
+            const chatId = getDmChatId(currentUser.id, userId);
+            setActiveChat(chatId, 'dm', userId);
+            
+            if (!messages[chatId]) {
+                messages[chatId] = [];
+            }
+            
+            const areFriends = friendships.some(f =>
+                ((f.user1 === currentUser.id && f.user2 === userId) ||
+                 (f.user1 === userId && f.user2 === currentUser.id)) &&
+                f.status === 'friends'
+            );
+            
+            if (!areFriends) {
+                friendships.push({
+                    user1: currentUser.id,
+                    user2: userId,
+                    status: 'friends'
+                });
+                loadDirectMessages();
+            }
+        }
+        
+        function showAddFriendModal() {
+            document.getElementById('add-friend-modal').classList.remove('hidden');
+            document.getElementById('add-friend-username').focus();
+        }
+        
+        function showNewDmModal() {
+            document.getElementById('new-dm-modal').classList.remove('hidden');
+            document.getElementById('new-dm-username').focus();
+        }
+        
+        function showServerCreateModal() {
+            document.getElementById('server-create-modal').classList.remove('hidden');
+            document.getElementById('server-name-input').focus();
+        }
+        
+        function showServerInviteModal() {
+            if (!currentServer) return;
+            
+            const server = getServerById(currentServer);
+            if (!server) return;
+            
+            document.getElementById('server-invite-link').value = `https://whatschat.com/invite/${server.invites[0]}`;
+            document.getElementById('server-invite-modal').classList.remove('hidden');
+        }
+        
+        function showServerSettingsModal() {
+            if (!currentServer) return;
+            
+            const server = getServerById(currentServer);
+            if (!server) return;
+            
+            document.getElementById('server-settings-name').value = server.name;
+            document.getElementById('server-settings-description').value = server.description || '';
+            document.getElementById('server-icon-preview').innerHTML = `<i class="fas fa-${server.icon || 'users'}"></i>`;
+            
+            document.getElementById('server-settings-modal').classList.remove('hidden');
+        }
+        
+        function showProfileModal() {
+            if (!currentUser) return;
+            
+            document.getElementById('user-avatar').style.backgroundColor = currentUser.avatarColor;
+            document.getElementById('user-avatar').innerHTML = currentUser.name.split(' ').map(n => n[0]).join('').toUpperCase();
+            document.getElementById('user-name').textContent = currentUser.name;
+            document.getElementById('user-username').textContent = `@${currentUser.username}`;
+            document.getElementById('user-email').textContent = currentUser.email;
+            
+            document.getElementById('profile-modal').classList.remove('hidden');
+        }
+        
+        function showSearch() {
+            document.getElementById('search-container').classList.remove('hidden');
+            document.getElementById('search-input').focus();
+        }
+        
+        function hideSearch() {
+            document.getElementById('search-container').classList.add('hidden');
+            document.getElementById('search-results').classList.add('hidden');
+            document.getElementById('search-input').value = '';
+        }
+        
+        // ====== CALL FUNCTIONALITY ======
+        
+        function startCall(userId, type, isInitiator = false) {
+            if (!currentUser || callActive) return;
+            
+            callActive = true;
+            callPeer = userId;
+            callType = type;
+            
+            document.getElementById('call-container').classList.remove('hidden');
+            
+            const localVideo = document.getElementById('local-video');
+            const remoteVideo = document.getElementById('remote-video');
+            
+            // In a real app, this would use WebRTC to establish a connection
+            // For this demo, we'll just simulate it
+            
+            if (type === 'video') {
+                localVideo.style.display = 'block';
+                remoteVideo.style.display = 'block';
+                
+                // Simulate video streams
+                localVideo.srcObject = new MediaStream();
+                remoteVideo.srcObject = new MediaStream();
+            } else {
+                localVideo.style.display = 'none';
+                remoteVideo.style.display = 'none';
+            }
+            
+            if (!isInitiator) {
+                // Notify the other user that call was accepted
+                ws.send(JSON.stringify({
+                    type: 'call',
+                    from: currentUser.id,
+                    to: userId,
+                    callType: type,
+                    action: 'accept'
+                }));
+            }
+            
+            // Update call buttons
+            document.getElementById('chat-video-button').disabled = true;
+            document.getElementById('chat-call-button').disabled = true;
+        }
+        
+        function showIncomingCall(from, type) {
+            if (!currentUser || callActive) return;
+            
+            const caller = getUserById(from);
+            if (!caller) return;
+            
+            const callModal = document.createElement('div');
+            callModal.className = 'modal';
+            callModal.innerHTML = `
+                <div class="modal-content">
+                    <div class="flex flex-col items-center">
+                        <div class="w-20 h-20 rounded-full mb-4 flex items-center justify-center text-white text-2xl" style="background-color: ${caller.avatarColor}">
+                            ${caller.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                        </div>
+                        <h3 class="text-xl font-bold mb-2">Incoming ${type === 'video' ? 'Video' : 'Voice'} Call</h3>
+                        <p class="text-gray-500 dark:text-gray-400 mb-6">${caller.name} is calling you</p>
+                        <div class="flex space-x-4">
+                            <button id="accept-call" class="w-16 h-16 rounded-full bg-success text-white flex items-center justify-center">
+                                <i class="fas fa-phone"></i>
+                            </button>
+                            <button id="reject-call" class="w-16 h-16 rounded-full bg-danger text-white flex items-center justify-center">
+                                <i class="fas fa-phone-slash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(callModal);
+            
+            callModal.querySelector('#accept-call').addEventListener('click', () => {
+                document.body.removeChild(callModal);
+                startCall(from, type);
+                
+                // Notify the caller that call was accepted
+                ws.send(JSON.stringify({
+                    type: 'call',
+                    from: currentUser.id,
+                    to: from,
+                    callType: type,
+                    action: 'accept'
+                }));
+            });
+            
+            callModal.querySelector('#reject-call').addEventListener('click', () => {
+                document.body.removeChild(callModal);
+                
+                // Notify the caller that call was rejected
+                ws.send(JSON.stringify({
+                    type: 'call',
+                    from: currentUser.id,
+                    to: from,
+                    callType: type,
+                    action: 'reject'
+                }));
+            });
+        }
+        
+        function endCall() {
+            if (!callActive) return;
+            
+            // Notify the other user that call ended
+            ws.send(JSON.stringify({
+                type: 'call',
+                from: currentUser.id,
+                to: callPeer,
+                callType: callType,
+                action: 'end'
+            }));
+            
+            document.getElementById('call-container').classList.add('hidden');
+            
+            const localVideo = document.getElementById('local-video');
+            const remoteVideo = document.getElementById('remote-video');
+            
+            if (localVideo.srcObject) {
+                localVideo.srcObject.getTracks().forEach(track => track.stop());
+                localVideo.srcObject = null;
+            }
+            
+            if (remoteVideo.srcObject) {
+                remoteVideo.srcObject.getTracks().forEach(track => track.stop());
+                remoteVideo.srcObject = null;
+            }
+            
+            callActive = false;
+            callPeer = null;
+            callType = null;
+            
+            // Re-enable call buttons
+            document.getElementById('chat-video-button').disabled = false;
+            document.getElementById('chat-call-button').disabled = false;
+        }
+        
+        function toggleMute() {
+            callMuted = !callMuted;
+            const muteButton = document.getElementById('call-mute');
+            
+            if (callMuted) {
+                muteButton.classList.add('call-active');
+                muteButton.innerHTML = '<i class="fas fa-microphone-slash"></i>';
+            } else {
+                muteButton.classList.remove('call-active');
+                muteButton.innerHTML = '<i class="fas fa-microphone"></i>';
+            }
+        }
+        
+        function toggleVideo() {
+            callVideoOff = !callVideoOff;
+            const videoButton = document.getElementById('call-video-toggle');
+            const localVideo = document.getElementById('local-video');
+            
+            if (callVideoOff) {
+                videoButton.classList.remove('call-active');
+                videoButton.innerHTML = '<i class="fas fa-video-slash"></i>';
+                localVideo.style.display = 'none';
+            } else {
+                videoButton.classList.add('call-active');
+                videoButton.innerHTML = '<i class="fas fa-video"></i>';
+                localVideo.style.display = 'block';
+            }
+        }
+        
+        // ====== FRIEND SYSTEM ======
+        
+        function sendFriendRequest(from, to) {
+            ws.send(JSON.stringify({
+                type: 'friend_request',
+                from,
+                to
+            }));
+        }
+        
+        function acceptFriendRequest(from, to) {
+            const friendship = friendships.find(f => 
+                f.user1 === from && f.user2 === to && f.status === 'pending'
+            );
+            
+            if (friendship) {
+                friendship.status = 'friends';
+                
+                // Notify the other user
+                ws.send(JSON.stringify({
+                    type: 'friend_request',
+                    from: to,
+                    to: from,
+                    status: 'accepted'
+                }));
+                
+                loadFriendRequests();
+                loadDirectMessages();
+            }
+        }
+        
+        function rejectFriendRequest(from, to) {
+            const index = friendships.findIndex(f => 
+                f.user1 === from && f.user2 === to && f.status === 'pending'
+            );
+            
+            if (index !== -1) {
+                friendships.splice(index, 1);
+                
+                // Notify the other user
+                ws.send(JSON.stringify({
+                    type: 'friend_request',
+                    from: to,
+                    to: from,
+                    status: 'rejected'
+                }));
+                
+                loadFriendRequests();
+            }
+        }
+        
+        // ====== SERVER MANAGEMENT ======
+        
+        function createServer(name, description) {
+            const newServer = {
+                id: `server-${Date.now()}`,
+                name,
+                description,
+                icon: 'users',
+                owner: currentUser.id,
+                members: [currentUser.id],
+                admins: [currentUser.id],
+                channels: [
+                    { id: `channel-${Date.now()}`, name: 'general', type: 'text' }
+                ],
+                invites: [`invite-${Date.now()}`]
+            };
+            
+            ws.send(JSON.stringify({
+                type: 'server_update',
+                action: 'create',
+                data: newServer
+            }));
+            
+            document.getElementById('server-create-modal').classList.add('hidden');
+            showToast('Server created successfully!', 'success');
+        }
+        
+        function updateServer(serverId, updates) {
+            ws.send(JSON.stringify({
+                type: 'server_update',
+                serverId,
+                action: 'update',
+                data: updates
+            }));
+        }
+        
+        function deleteServer(serverId) {
+            ws.send(JSON.stringify({
+                type: 'server_update',
+                serverId,
+                action: 'delete'
+            }));
+        }
+        
+        function grantAdminRole(serverId, userId) {
+            const server = getServerById(serverId);
+            if (!server) return;
+            
+            if (!server.admins.includes(userId)) {
+                server.admins.push(userId);
+                updateServer(serverId, { admins: server.admins });
+            }
+        }
+        
+        function revokeAdminRole(serverId, userId) {
+            const server = getServerById(serverId);
+            if (!server) return;
+            
+            const index = server.admins.indexOf(userId);
+            if (index !== -1) {
+                server.admins.splice(index, 1);
+                updateServer(serverId, { admins: server.admins });
+            }
+        }
+        
+        function kickUser(serverId, userId) {
+            const server = getServerById(serverId);
+            if (!server) return;
+            
+            const memberIndex = server.members.indexOf(userId);
+            if (memberIndex !== -1) {
+                server.members.splice(memberIndex, 1);
+            }
+            
+            const adminIndex = server.admins.indexOf(userId);
+            if (adminIndex !== -1) {
+                server.admins.splice(adminIndex, 1);
+            }
+            
+            updateServer(serverId, {
+                members: server.members,
+                admins: server.admins
+            });
+        }
+        
+        function banUser(userId) {
+            const user = getUserById(userId);
+            if (user) {
+                user.banned = true;
+                
+                // Kick user from all servers
+                servers.forEach(server => {
+                    if (server.members.includes(userId)) {
+                        kickUser(server.id, userId);
+                    }
+                });
+                
+                showToast(`${user.name} has been banned`, 'warning');
+            }
+        }
+        
+        function unbanUser(userId) {
+            const user = getUserById(userId);
+            if (user) {
+                user.banned = false;
+                showToast(`${user.name} has been unbanned`, 'success');
+            }
+        }
+        
+        // ====== AUTHENTICATION ======
+        
+        function login(email, password) {
+            const user = users.find(u => u.email.toLowerCase() === email.toLowerCase() && u.password === password && !u.banned);
+            
+            if (user) {
+                currentUser = user;
+                user.lastActive = Date.now();
+                
+                showToast(`Welcome back, ${user.name}!`, 'success');
+                initializeApp();
+                return true;
+            }
+            
+            return false;
+        }
+        
+        function register(name, username, email, password) {
+            if (users.some(u => u.email.toLowerCase() === email.toLowerCase())) {
+                return { success: false, error: 'Email already in use' };
+            }
+            
+            if (users.some(u => u.username.toLowerCase() === username.toLowerCase())) {
+                return { success: false, error: 'Username already taken' };
+            }
+            
+            const newUser = {
+                id: `user${users.length + 1}`,
+                name,
+                username,
+                email,
+                password,
+                status: 'online',
+                avatarColor: '#5D5CDE',
+                lastActive: Date.now(),
+                isAdmin: false,
+                banned: false
+            };
+            
+            users.push(newUser);
+            currentUser = newUser;
+            
+            showToast(`Welcome to WhatsChat, ${name}!`, 'success');
+            initializeApp();
+            return { success: true };
+        }
+        
+        function logout() {
+            if (callActive) {
+                endCall();
+            }
+            
+            currentUser = null;
+            currentServer = null;
+            currentChannel = null;
+            currentChat = null;
+            
+            showScreen('auth-container');
+            showToast('You have been logged out', 'info');
+        }
+        
+        function initializeApp() {
+            showScreen('chat-container');
+            
+            // Connect WebSocket
+            ws.connect();
+            
+            // Load data
+            loadServers();
+            loadDirectMessages();
+            loadFriendRequests();
+            
+            // Set theme preference
+            if (currentUser.themePreference) {
+                applyTheme(currentUser.themePreference);
+            } else {
+                applyTheme('system');
+            }
+            
+            // Switch to general server if member
+            const generalServer = getServerById('general');
+            if (generalServer && generalServer.members.includes(currentUser.id)) {
+                switchServer('general');
+            } else {
+                // Otherwise show home view
+                document.getElementById('home-button').click();
+            }
+        }
+        
+        // ====== EVENT LISTENERS ======
+        
+        // Login form
+        document.getElementById('login-button').addEventListener('click', () => {
+            const email = document.getElementById('login-email').value.trim();
+            const password = document.getElementById('login-password').value;
+            
+            document.getElementById('login-email-error').classList.add('hidden');
+            document.getElementById('login-password-error').classList.add('hidden');
+            
+            if (!email) {
+                document.getElementById('login-email-error').textContent = 'Email is required';
+                document.getElementById('login-email-error').classList.remove('hidden');
+                return;
+            }
+            
+            if (!password) {
+                document.getElementById('login-password-error').textContent = 'Password is required';
+                document.getElementById('login-password-error').classList.remove('hidden');
+                return;
+            }
+            
+            if (!login(email, password)) {
+                document.getElementById('login-password-error').textContent = 'Invalid email or password';
+                document.getElementById('login-password-error').classList.remove('hidden');
+            }
+        });
+        
+        // Admin login
+        document.getElementById('admin-login').addEventListener('click', () => {
+            login('admin@example.com', 'admin123');
+        });
+        
+        // Register form
+        document.getElementById('register-button').addEventListener('click', () => {
+            const name = document.getElementById('register-name').value.trim();
+            const username = document.getElementById('register-username').value.trim();
+            const email = document.getElementById('register-email').value.trim();
+            const password = document.getElementById('register-password').value;
+            const confirm = document.getElementById('register-confirm').value;
+            
+            document.getElementById('register-name-error').classList.add('hidden');
+            document.getElementById('register-username-error').classList.add('hidden');
+            document.getElementById('register-email-error').classList.add('hidden');
+            document.getElementById('register-password-error').classList.add('hidden');
+            document.getElementById('register-confirm-error').classList.add('hidden');
+            
+            if (!name) {
+                document.getElementById('register-name-error').textContent = 'Name is required';
+                document.getElementById('register-name-error').classList.remove('hidden');
+                return;
+            }
+            
+            if (!username) {
+                document.getElementById('register-username-error').textContent = 'Username is required';
+                document.getElementById('register-username-error').classList.remove('hidden');
+                return;
+            }
+            
+            if (!email || !email.includes('@')) {
+                document.getElementById('register-email-error').textContent = 'Valid email is required';
+                document.getElementById('register-email-error').classList.remove('hidden');
+                return;
+            }
+            
+            if (!password || password.length < 6) {
+                document.getElementById('register-password-error').textContent = 'Password must be at least 6 characters';
+                document.getElementById('register-password-error').classList.remove('hidden');
+                return;
+            }
+            
+            if (password !== confirm) {
+                document.getElementById('register-confirm-error').textContent = 'Passwords do not match';
+                document.getElementById('register-confirm-error').classList.remove('hidden');
+                return;
+            }
+            
+            const result = register(name, username, email, password);
+            if (!result.success) {
+                if (result.error.includes('Email')) {
+                    document.getElementById('register-email-error').textContent = result.error;
+                    document.getElementById('register-email-error').classList.remove('hidden');
+                } else if (result.error.includes('Username')) {
+                    document.getElementById('register-username-error').textContent = result.error;
+                    document.getElementById('register-username-error').classList.remove('hidden');
+                }
+            }
+        });
+        
+        // Logout
+        document.getElementById('logout-button').addEventListener('click', logout);
+        
+        // Send message
+        document.getElementById('send-button').addEventListener('click', sendMessage);
+        document.getElementById('message-input').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+        
+        // Emoji picker
+        document.getElementById('emoji-button').addEventListener('click', () => {
+            const emojiPicker = document.getElementById('emoji-picker');
+            emojiPicker.style.display = emojiPicker.style.display === 'block' ? 'none' : 'block';
+        });
+        
+        document.addEventListener('click', (e) => {
+            const emojiButton = document.getElementById('emoji-button');
+            const emojiPicker = document.getElementById('emoji-picker');
+            
+            if (!emojiButton.contains(e.target) && !emojiPicker.contains(e.target)) {
+                emojiPicker.style.display = 'none';
+            }
+        });
+        
+        document.querySelectorAll('.emoji-item').forEach(item => {
+            item.addEventListener('click', () => {
+                document.getElementById('message-input').value += item.textContent;
+                document.getElementById('message-input').focus();
+            });
+        });
+        
+        // Home button
+        document.getElementById('home-button').addEventListener('click', () => {
+            currentServer = null;
+            currentChannel = null;
+            currentChat = null;
+            
+            document.getElementById('server-info').classList.add('hidden');
+            loadDirectMessages();
+            showChat();
+            
+            document.querySelectorAll('.server-icon').forEach(icon => {
+                icon.classList.remove('bg-primary');
+                icon.classList.add('bg-gray-700');
+            });
+            
+            toggleMembersList(false);
+        });
+        
+        // Mobile home button
+        document.getElementById('mobile-home').addEventListener('click', () => {
+            document.getElementById('home-button').click();
+        });
+        
+        // Back button (mobile)
+        document.getElementById('back-button').addEventListener('click', () => {
+            document.getElementById('channels-sidebar').classList.remove('hidden');
+            document.getElementById('chat-area').classList.add('hidden');
+        });
+        
+        // Add friend
+        document.getElementById('add-friend-button').addEventListener('click', showAddFriendModal);
+        document.getElementById('welcome-add-friend').addEventListener('click', showAddFriendModal);
+        
+        document.getElementById('add-friend-submit').addEventListener('click', () => {
+            const username = document.getElementById('add-friend-username').value.trim();
+            const errorElement = document.getElementById('add-friend-error');
+            
+            errorElement.classList.add('hidden');
+            
+            if (!username) {
+                errorElement.textContent = 'Username is required';
+                errorElement.classList.remove('hidden');
+                return;
+            }
+            
+            const user = getUserByUsername(username);
+            
+            if (!user) {
+                errorElement.textContent = 'User not found';
+                errorElement.classList.remove('hidden');
+                return;
+            }
+            
+            if (user.id === currentUser.id) {
+                errorElement.textContent = "You can't add yourself as a friend";
+                errorElement.classList.remove('hidden');
+                return;
+            }
+            
+            const friendStatus = getFriendshipStatus(currentUser.id, user.id);
+            
+            if (friendStatus === 'friends') {
+                errorElement.textContent = 'You are already friends with this user';
+                errorElement.classList.remove('hidden');
+                return;
+            }
+            
+            if (friendStatus === 'sent') {
+                errorElement.textContent = 'Friend request already sent';
+                errorElement.classList.remove('hidden');
+                return;
+            }
+            
+            if (friendStatus === 'received') {
+                acceptFriendRequest(user.id, currentUser.id);
+                document.getElementById('add-friend-modal').classList.add('hidden');
+                return;
+            }
+            
+            sendFriendRequest(currentUser.id, user.id);
+            document.getElementById('add-friend-modal').classList.add('hidden');
+            document.getElementById('add-friend-username').value = '';
+        });
+        
+        // New DM
+        document.getElementById('new-dm-button').addEventListener('click', showNewDmModal);
+        
+        document.getElementById('new-dm-submit').addEventListener('click', () => {
+            const username = document.getElementById('new-dm-username').value.trim();
+            const errorElement = document.getElementById('new-dm-error');
+            
+            errorElement.classList.add('hidden');
+            
+            if (!username) {
+                errorElement.textContent = 'Username is required';
+                errorElement.classList.remove('hidden');
+                return;
+            }
+            
+            const user = getUserByUsername(username);
+            
+            if (!user) {
+                errorElement.textContent = 'User not found';
+                errorElement.classList.remove('hidden');
+                return;
+            }
+            
+            if (user.id === currentUser.id) {
+                errorElement.textContent = "You can't message yourself";
+                errorElement.classList.remove('hidden');
+                return;
+            }
+            
+            const friendStatus = getFriendshipStatus(currentUser.id, user.id);
+            
+            if (friendStatus !== 'friends') {
+                errorElement.textContent = 'You can only message friends';
+                errorElement.classList.remove('hidden');
+                return;
+            }
+            
+            startDirectMessage(user.id);
+            document.getElementById('new-dm-modal').classList.add('hidden');
+            document.getElementById('new-dm-username').value = '';
+        });
+        
+        // Profile button
+        document.getElementById('profile-button').addEventListener('click', showProfileModal);
+        
+        // Theme settings
+        document.getElementById('theme-light').addEventListener('click', () => {
+            applyTheme('light');
+        });
+        
+        document.getElementById('theme-dark').addEventListener('click', () => {
+            applyTheme('dark');
+        });
+        
+        document.getElementById('theme-system').addEventListener('click', () => {
+            applyTheme('system');
+        });
+        
+        // Status settings
+        document.getElementById('status-online').addEventListener('click', () => {
+            if (!currentUser) return;
+            currentUser.status = 'online';
+            showToast('Status set to Online', 'success');
+            document.getElementById('profile-modal').classList.add('hidden');
+        });
+        
+        document.getElementById('status-idle').addEventListener('click', () => {
+            if (!currentUser) return;
+            currentUser.status = 'idle';
+            showToast('Status set to Idle', 'success');
+            document.getElementById('profile-modal').classList.add('hidden');
+        });
+        
+        document.getElementById('status-dnd').addEventListener('click', () => {
+            if (!currentUser) return;
+            currentUser.status = 'dnd';
+            showToast('Status set to Do Not Disturb', 'success');
+            document.getElementById('profile-modal').classList.add('hidden');
+        });
+        
+        document.getElementById('status-invisible').addEventListener('click', () => {
+            if (!currentUser) return;
+            currentUser.status = 'invisible';
+            showToast('Status set to Invisible', 'success');
+            document.getElementById('profile-modal').classList.add('hidden');
+        });
+        
+        // View members
+        document.getElementById('chat-header').addEventListener('click', (e) => {
+            if (currentServer && !e.target.closest('button')) {
+                toggleMembersList(true);
+            }
+        });
+        
+        // New chat button
+        document.getElementById('new-chat-button').addEventListener('click', () => {
+            if (currentServer) {
+                showServerInviteModal();
+            } else {
+                showNewDmModal();
+            }
+        });
+        
+        // Friends button
+        document.getElementById('friends-button').addEventListener('click', () => {
+            document.getElementById('home-button').click();
+        });
+        
+        // Settings button
+        document.getElementById('settings-button').addEventListener('click', showProfileModal);
+        
+        // Search
+        document.getElementById('search-button').addEventListener('click', showSearch);
+        document.getElementById('chat-search-button').addEventListener('click', showSearch);
+        document.getElementById('close-search').addEventListener('click', hideSearch);
+        
+        document.getElementById('search-input').addEventListener('input', (e) => {
+            const query = e.target.value.trim().toLowerCase();
+            const resultsContainer = document.getElementById('search-results');
+            
+            if (query === '') {
+                resultsContainer.classList.add('hidden');
+                return;
+            }
+            
+            resultsContainer.innerHTML = '';
+            
+            // Search users
+            const userResults = users.filter(user => 
+                user.id !== currentUser.id && 
+                !user.banned &&
+                (user.name.toLowerCase().includes(query) || 
+                 user.username.toLowerCase().includes(query))
+            );
+            
+            if (userResults.length > 0) {
+                const userSection = document.createElement('div');
+                userSection.className = 'mb-4';
+                userSection.innerHTML = '<h4 class="text-sm font-medium mb-2">Users</h4>';
+                
+                userResults.forEach(user => {
+                    const userItem = document.createElement('div');
+                    userItem.className = 'flex items-center p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg cursor-pointer';
+                    userItem.innerHTML = `
+                        ${generateAvatar(user, 'sm')}
+                        <div class="ml-2">
+                            <div class="font-medium text-sm">${user.name}</div>
+                            <div class="text-xs text-gray-500 dark:text-gray-400">@${user.username}</div>
+                        </div>
+                    `;
+                    
+                    userItem.addEventListener('click', () => {
+                        startDirectMessage(user.id);
+                        hideSearch();
+                    });
+                    
+                    userSection.appendChild(userItem);
+                });
+                
+                resultsContainer.appendChild(userSection);
+            }
+            
+            // Search servers
+            const serverResults = servers.filter(server => 
+                server.members.includes(currentUser.id) && 
+                server.name.toLowerCase().includes(query)
+            );
+            
+            if (serverResults.length > 0) {
+                const serverSection = document.createElement('div');
+                serverSection.className = 'mb-4';
+                serverSection.innerHTML = '<h4 class="text-sm font-medium mb-2">Servers</h4>';
+                
+                serverResults.forEach(server => {
+                    const serverItem = document.createElement('div');
+                    serverItem.className = 'flex items-center p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg cursor-pointer';
+                    serverItem.innerHTML = `
+                        <div class="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center text-white">
+                            <i class="fas fa-${server.icon || 'users'}"></i>
+                        </div>
+                        <div class="ml-2">
+                            <div class="font-medium text-sm">${server.name}</div>
+                            <div class="text-xs text-gray-500 dark:text-gray-400">${server.members.length} members</div>
+                        </div>
+                    `;
+                    
+                    serverItem.addEventListener('click', () => {
+                        switchServer(server.id);
+                        hideSearch();
+                    });
+                    
+                    serverSection.appendChild(serverItem);
+                });
+                
+                resultsContainer.appendChild(serverSection);
+            }
+            
+            resultsContainer.classList.remove('hidden');
+        });
+        
+        // Call buttons
+        document.getElementById('chat-video-button').addEventListener('click', () => {
+            if (!currentChat || !currentChat.startsWith('dm-')) return;
+            
+            const userIds = currentChat.replace('dm-', '').split('-');
+            const otherUserId = userIds[0] === currentUser.id ? userIds[1] : userIds[0];
+            
+            // Start video call
+            startCall(otherUserId, 'video');
+            
+            // Notify the other user
+            ws.send(JSON.stringify({
+                type: 'call',
+                from: currentUser.id,
+                to: otherUserId,
+                callType: 'video',
+                action: 'start'
+            }));
+        });
+        
+        document.getElementById('chat-call-button').addEventListener('click', () => {
+            if (!currentChat || !currentChat.startsWith('dm-')) return;
+            
+            const userIds = currentChat.replace('dm-', '').split('-');
+            const otherUserId = userIds[0] === currentUser.id ? userIds[1] : userIds[0];
+            
+            // Start voice call
+            startCall(otherUserId, 'voice');
+            
+            // Notify the other user
+            ws.send(JSON.stringify({
+                type: 'call',
+                from: currentUser.id,
+                to: otherUserId,
+                callType: 'voice',
+                action: 'start'
+            }));
+        });
+        
+        // Call controls
+        document.getElementById('call-end-button').addEventListener('click', endCall);
+        document.getElementById('call-mute').addEventListener('click', toggleMute);
+        document.getElementById('call-video-toggle').addEventListener('click', toggleVideo);
+        
+        // Server creation
+        document.getElementById('add-server-button').addEventListener('click', showServerCreateModal);
+        
+        document.getElementById('server-create-submit').addEventListener('click', () => {
+            const name = document.getElementById('server-name-input').value.trim();
+            const description = document.getElementById('server-description-input').value.trim();
+            const errorElement = document.getElementById('server-name-error');
+            
+            errorElement.classList.add('hidden');
+            
+            if (!name) {
+                errorElement.textContent = 'Server name is required';
+                errorElement.classList.remove('hidden');
+                return;
+            }
+            
+            createServer(name, description);
+        });
+        
+        // Server invite
+        document.getElementById('invite-button').addEventListener('click', showServerInviteModal);
+        document.getElementById('copy-invite-link').addEventListener('click', () => {
+            const linkInput = document.getElementById('server-invite-link');
+            linkInput.select();
+            document.execCommand('copy');
+            
+            const copiedElement = document.getElementById('invite-copied');
+            copiedElement.classList.remove('hidden');
+            setTimeout(() => {
+                copiedElement.classList.add('hidden');
+            }, 2000);
+        });
+        
+        document.getElementById('generate-new-link').addEventListener('click', () => {
+            if (!currentServer) return;
+            
+            const server = getServerById(currentServer);
+            if (!server) return;
+            
+            server.invites = [`invite-${Date.now()}`];
+            document.getElementById('server-invite-link').value = `https://whatschat.com/invite/${server.invites[0]}`;
+            showToast('New invite link generated', 'success');
+        });
+        
+        document.getElementById('revoke-all-links').addEventListener('click', () => {
+            if (!currentServer) return;
+            
+            const server = getServerById(currentServer);
+            if (!server) return;
+            
+            server.invites = [];
+            showToast('All invite links revoked', 'warning');
+            document.getElementById('server-invite-modal').classList.add('hidden');
+        });
+        
+        // Server settings
+        document.getElementById('server-settings-button').addEventListener('click', showServerSettingsModal);
+        
+        document.getElementById('save-server-settings').addEventListener('click', () => {
+            if (!currentServer) return;
+            
+            const server = getServerById(currentServer);
+            if (!server) return;
+            
+            const name = document.getElementById('server-settings-name').value.trim();
+            const description = document.getElementById('server-settings-description').value.trim();
+            
+            updateServer(server.id, {
+                name,
+                description
+            });
+            
+            document.getElementById('server-settings-modal').classList.add('hidden');
+            showToast('Server settings saved', 'success');
+        });
+        
+        document.getElementById('delete-server').addEventListener('click', () => {
+            if (!currentServer) return;
+            
+            if (confirm('Are you sure you want to delete this server? This cannot be undone.')) {
+                deleteServer(currentServer);
+                document.getElementById('server-settings-modal').classList.add('hidden');
+            }
+        });
+        
+        // Theme toggle
+        document.getElementById('theme-toggle').addEventListener('click', () => {
+            document.documentElement.classList.toggle('dark');
+        });
+        
+        document.getElementById('auth-theme-toggle').addEventListener('click', () => {
+            document.documentElement.classList.toggle('dark');
+        });
+        
+        // Close modals
+        document.querySelectorAll('.close-modal').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.modal').forEach(modal => {
+                    modal.classList.add('hidden');
+                });
+            });
+        });
+        
+        document.querySelectorAll('.modal').forEach(modal => {
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    modal.classList.add('hidden');
+                }
+            });
+        });
+        
+        // Initialize theme
+        applyTheme('system');
+        
+        // Listen for system theme changes
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => {
+            if (themePreference === 'system') {
+                if (event.matches) {
+                    document.documentElement.classList.add('dark');
+                } else {
+                    document.documentElement.classList.remove('dark');
+                }
+            }
+        });
+    </script>
+</body>
+</html>
