@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WhatsChat</title>
+    <title>WhatsCord</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script>
@@ -227,6 +227,38 @@
             background-color: #43B581;
             color: white;
         }
+        /* Image preview */
+        .image-preview {
+            max-width: 100%;
+            max-height: 200px;
+            margin-top: 1rem;
+            border-radius: 0.5rem;
+            display: none;
+        }
+        /* Admin panel */
+        .admin-panel {
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 400px;
+            height: 100%;
+            background-color: white;
+            z-index: 1000;
+            box-shadow: -5px 0 15px rgba(0,0,0,0.1);
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+        }
+        .dark .admin-panel {
+            background-color: #2F3136;
+        }
+        .admin-panel.open {
+            transform: translateX(0);
+        }
+        .admin-panel-content {
+            padding: 1.5rem;
+            height: calc(100% - 60px);
+            overflow-y: auto;
+        }
     </style>
 </head>
 <body class="font-sans antialiased text-light-text dark:text-dark-text bg-light-bg dark:bg-dark-bg">
@@ -241,7 +273,7 @@
                         W<span class="text-lg">C</span>
                     </div>
                 </div>
-                <h1 class="text-2xl font-bold text-center mb-1">WhatsChat</h1>
+                <h1 class="text-2xl font-bold text-center mb-1">WhatsCord</h1>
                 <p class="text-center text-gray-500 dark:text-gray-400 mb-8">Connect with friends in real-time</p>
                 
                 <!-- Auth tabs -->
@@ -343,7 +375,7 @@
                             <div class="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center text-xl font-bold sm:hidden" id="mobile-home">
                                 W
                             </div>
-                            <h1 class="text-xl font-bold">WhatsChat</h1>
+                            <h1 class="text-xl font-bold">WhatsCord</h1>
                         </div>
                         <div class="flex items-center space-x-3">
                             <button id="search-button" class="text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-primary">
@@ -488,7 +520,7 @@
                         <div class="w-20 h-20 bg-primary rounded-full flex items-center justify-center text-white text-3xl font-bold mb-4">
                             W
                         </div>
-                        <h2 class="text-2xl font-bold mb-2">Welcome to WhatsChat</h2>
+                        <h2 class="text-2xl font-bold mb-2">Welcome to WhatsCord</h2>
                         <p class="text-gray-500 dark:text-gray-400 max-w-md">
                             Connect with friends, join channels, and chat in real-time.
                         </p>
@@ -691,6 +723,19 @@
                     <label for="server-description-input" class="block text-sm font-medium mb-1">Description (Optional)</label>
                     <textarea id="server-description-input" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-dark-card text-light-text dark:text-dark-text focus:outline-none focus:ring-2 focus:ring-primary text-base" placeholder="What's this server about?"></textarea>
                 </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium mb-1">Server Icon</label>
+                    <div class="flex items-center">
+                        <div id="server-icon-preview-create" class="w-16 h-16 rounded-lg bg-secondary flex items-center justify-center text-white text-xl mr-4">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <input type="file" id="server-icon-upload" accept="image/*" class="hidden">
+                        <button id="change-server-icon-create" class="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-lg">
+                            Upload Image
+                        </button>
+                    </div>
+                    <img id="server-icon-preview-image" class="image-preview">
+                </div>
                 <button id="server-create-submit" class="w-full bg-primary hover:bg-opacity-90 text-white font-medium py-2 px-4 rounded-lg transition-all">Create Server</button>
             </div>
         </div>
@@ -750,10 +795,21 @@
                         <div id="server-icon-preview" class="w-16 h-16 rounded-lg bg-secondary flex items-center justify-center text-white text-xl mr-4">
                             <i class="fas fa-users"></i>
                         </div>
+                        <input type="file" id="server-icon-upload-settings" accept="image/*" class="hidden">
                         <button id="change-server-icon" class="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-lg">
                             Change Icon
                         </button>
                     </div>
+                    <img id="server-icon-preview-image-settings" class="image-preview">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium mb-1">Channels</label>
+                    <div id="channel-management" class="space-y-2">
+                        <!-- Channels will be populated here -->
+                    </div>
+                    <button id="add-channel-button" class="mt-2 text-sm bg-primary text-white px-3 py-1 rounded">
+                        <i class="fas fa-plus mr-1"></i> Add Channel
+                    </button>
                 </div>
                 <div class="flex space-x-2">
                     <button id="save-server-settings" class="flex-1 py-2 bg-primary text-white rounded-lg">
@@ -832,6 +888,48 @@
         </div>
     </div>
 
+    <!-- Admin panel -->
+    <div id="admin-panel" class="admin-panel">
+        <div class="bg-primary text-white p-4 flex justify-between items-center">
+            <h3 class="text-lg font-bold">Admin Panel</h3>
+            <button id="close-admin-panel" class="text-white hover:text-gray-200">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="admin-panel-content">
+            <div class="mb-6">
+                <h4 class="font-medium mb-3">User Management</h4>
+                <div class="space-y-2">
+                    <input type="text" id="admin-search-users" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-dark-card text-light-text dark:text-dark-text focus:outline-none focus:ring-2 focus:ring-primary text-sm" placeholder="Search users...">
+                    <div id="admin-user-list" class="max-h-60 overflow-y-auto">
+                        <!-- Users will be populated here -->
+                    </div>
+                </div>
+            </div>
+            <div class="mb-6">
+                <h4 class="font-medium mb-3">Server Management</h4>
+                <div class="space-y-2">
+                    <input type="text" id="admin-search-servers" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-dark-card text-light-text dark:text-dark-text focus:outline-none focus:ring-2 focus:ring-primary text-sm" placeholder="Search servers...">
+                    <div id="admin-server-list" class="max-h-60 overflow-y-auto">
+                        <!-- Servers will be populated here -->
+                    </div>
+                </div>
+            </div>
+            <div>
+                <h4 class="font-medium mb-3">System</h4>
+                <button id="admin-refresh-data" class="w-full py-2 px-4 bg-primary text-white rounded-lg mb-2">
+                    <i class="fas fa-sync-alt mr-2"></i> Refresh Data
+                </button>
+                <button id="admin-export-data" class="w-full py-2 px-4 bg-success text-white rounded-lg mb-2">
+                    <i class="fas fa-download mr-2"></i> Export Data
+                </button>
+                <button id="admin-import-data" class="w-full py-2 px-4 bg-warning text-white rounded-lg">
+                    <i class="fas fa-upload mr-2"></i> Import Data
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Toast notification -->
     <div id="toast" class="toast">
         <div class="flex items-center">
@@ -844,13 +942,13 @@
         // ====== DATA STRUCTURES AND REAL-TIME FUNCTIONALITY ======
         
         // User data with admin support
-        const users = [
+        let users = JSON.parse(localStorage.getItem('whatscord_users')) || [
             { 
                 id: 'admin1', 
                 name: 'Admin User', 
                 username: 'admin', 
                 email: 'admin@example.com', 
-                password: 'admin123', 
+                password: 'Arthur2013!', 
                 status: 'online', 
                 avatarColor: '#5D5CDE', 
                 lastActive: Date.now(),
@@ -884,12 +982,13 @@
         ];
 
         // Server data with admin support
-        let servers = [
+        let servers = JSON.parse(localStorage.getItem('whatscord_servers')) || [
             { 
                 id: 'general',
                 name: 'General Community',
                 description: 'A place for everyone to chat about anything',
                 icon: 'users',
+                iconImage: null,
                 owner: 'admin1',
                 members: ['admin1', 'user2', 'user3'],
                 admins: ['admin1'],
@@ -902,7 +1001,7 @@
         ];
 
         // Messages data
-        const messages = {
+        let messages = JSON.parse(localStorage.getItem('whatscord_messages')) || {
             'dm-admin1-user2': [
                 { id: 'msg1', sender: 'user2', content: 'Hey admin, how are you?', timestamp: Date.now() - 1000 * 60 * 15 },
                 { id: 'msg2', sender: 'admin1', content: "I'm good, thanks for asking!", timestamp: Date.now() - 1000 * 60 * 14 }
@@ -914,13 +1013,13 @@
         };
 
         // Friend relationships
-        let friendships = [
+        let friendships = JSON.parse(localStorage.getItem('whatscord_friendships')) || [
             { user1: 'admin1', user2: 'user2', status: 'friends' },
             { user1: 'admin1', user2: 'user3', status: 'pending' }
         ];
 
         // Current session data
-        let currentUser = null;
+        let currentUser = JSON.parse(localStorage.getItem('whatscord_currentUser'));
         let currentServer = null;
         let currentChannel = null;
         let currentChat = null;
@@ -930,6 +1029,17 @@
         let callType = null; // 'voice' or 'video'
         let callMuted = false;
         let callVideoOff = false;
+
+        // Save data to localStorage
+        function saveData() {
+            localStorage.setItem('whatscord_users', JSON.stringify(users));
+            localStorage.setItem('whatscord_servers', JSON.stringify(servers));
+            localStorage.setItem('whatscord_messages', JSON.stringify(messages));
+            localStorage.setItem('whatscord_friendships', JSON.stringify(friendships));
+            if (currentUser) {
+                localStorage.setItem('whatscord_currentUser', JSON.stringify(currentUser));
+            }
+        }
 
         // Simulated WebSocket connection for real-time updates
         class WebSocketSimulator {
@@ -965,6 +1075,9 @@
                     } else if (data.type === 'server_update') {
                         this.handleServerUpdate(data);
                     }
+                    
+                    // Save data after each update
+                    saveData();
                 }, 300);
             }
 
@@ -1083,6 +1196,11 @@
                         loadServers();
                         showChat();
                     }
+                }
+                
+                // Update admin panel if open
+                if (document.getElementById('admin-panel').classList.contains('open')) {
+                    loadAdminPanel();
                 }
             }
 
@@ -1273,6 +1391,7 @@
             // Save preference for current user
             if (currentUser) {
                 currentUser.themePreference = preference;
+                saveData();
             }
         }
 
@@ -1671,7 +1790,12 @@
                     const serverIcon = document.createElement('div');
                     serverIcon.className = `server-icon w-12 h-12 rounded-2xl ${currentServer === server.id ? 'bg-primary' : 'bg-gray-700'} hover:bg-primary transition-all hover:rounded-xl cursor-pointer flex items-center justify-center text-white`;
                     serverIcon.dataset.serverId = server.id;
-                    serverIcon.innerHTML = `<i class="fas fa-${server.icon || 'users'}"></i>`;
+                    
+                    if (server.iconImage) {
+                        serverIcon.innerHTML = `<img src="${server.iconImage}" class="w-full h-full rounded-2xl object-cover">`;
+                    } else {
+                        serverIcon.innerHTML = `<i class="fas fa-${server.icon || 'users'}"></i>`;
+                    }
                     
                     serverIcon.addEventListener('click', () => {
                         switchServer(server.id);
@@ -1917,6 +2041,7 @@
                     status: 'friends'
                 });
                 loadDirectMessages();
+                saveData();
             }
         }
         
@@ -1941,7 +2066,7 @@
             const server = getServerById(currentServer);
             if (!server) return;
             
-            document.getElementById('server-invite-link').value = `https://whatschat.com/invite/${server.invites[0]}`;
+            document.getElementById('server-invite-link').value = `https://polite-kringle-7172a3.netlify.app/invite/${server.invites[0]}`;
             document.getElementById('server-invite-modal').classList.remove('hidden');
         }
         
@@ -1953,7 +2078,39 @@
             
             document.getElementById('server-settings-name').value = server.name;
             document.getElementById('server-settings-description').value = server.description || '';
-            document.getElementById('server-icon-preview').innerHTML = `<i class="fas fa-${server.icon || 'users'}"></i>`;
+            
+            if (server.iconImage) {
+                document.getElementById('server-icon-preview').innerHTML = `<img src="${server.iconImage}" class="w-full h-full rounded-lg object-cover">`;
+            } else {
+                document.getElementById('server-icon-preview').innerHTML = `<i class="fas fa-${server.icon || 'users'}"></i>`;
+            }
+            
+            // Load channels for management
+            const channelManagement = document.getElementById('channel-management');
+            channelManagement.innerHTML = '';
+            
+            server.channels.forEach(channel => {
+                const channelItem = document.createElement('div');
+                channelItem.className = 'flex items-center justify-between p-2 bg-gray-100 dark:bg-gray-700 rounded-lg';
+                channelItem.innerHTML = `
+                    <div class="flex items-center">
+                        <i class="fas fa-${channel.type === 'voice' ? 'microphone' : 'hashtag'} mr-2"></i>
+                        <span>${channel.name}</span>
+                    </div>
+                    <button class="delete-channel text-danger" data-channel-id="${channel.id}">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                `;
+                
+                channelItem.querySelector('.delete-channel').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    if (confirm(`Are you sure you want to delete channel ${channel.name}?`)) {
+                        deleteChannel(server.id, channel.id);
+                    }
+                });
+                
+                channelManagement.appendChild(channelItem);
+            });
             
             document.getElementById('server-settings-modal').classList.remove('hidden');
         }
@@ -1979,6 +2136,92 @@
             document.getElementById('search-container').classList.add('hidden');
             document.getElementById('search-results').classList.add('hidden');
             document.getElementById('search-input').value = '';
+        }
+        
+        function toggleAdminPanel() {
+            const adminPanel = document.getElementById('admin-panel');
+            adminPanel.classList.toggle('open');
+            
+            if (adminPanel.classList.contains('open')) {
+                loadAdminPanel();
+            }
+        }
+        
+        function loadAdminPanel() {
+            if (!currentUser || !currentUser.isAdmin) return;
+            
+            const userList = document.getElementById('admin-user-list');
+            const serverList = document.getElementById('admin-server-list');
+            
+            userList.innerHTML = '';
+            serverList.innerHTML = '';
+            
+            // Populate user list
+            users.forEach(user => {
+                const userItem = document.createElement('div');
+                userItem.className = 'flex items-center justify-between p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg';
+                userItem.innerHTML = `
+                    <div class="flex items-center">
+                        ${generateAvatar(user, 'sm')}
+                        <div class="ml-2">
+                            <div class="font-medium text-sm">${user.name}</div>
+                            <div class="text-xs text-gray-500 dark:text-gray-400">@${user.username}</div>
+                        </div>
+                    </div>
+                    <div class="flex space-x-1">
+                        ${user.banned ? `
+                            <button class="unban-user p-1.5 bg-success text-white rounded-full" data-user-id="${user.id}">
+                                <i class="fas fa-user-check text-xs"></i>
+                            </button>
+                        ` : `
+                            <button class="ban-user p-1.5 bg-danger text-white rounded-full" data-user-id="${user.id}">
+                                <i class="fas fa-ban text-xs"></i>
+                            </button>
+                        `}
+                    </div>
+                `;
+                
+                userItem.querySelector('.ban-user')?.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    banUser(user.id);
+                });
+                
+                userItem.querySelector('.unban-user')?.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    unbanUser(user.id);
+                });
+                
+                userList.appendChild(userItem);
+            });
+            
+            // Populate server list
+            servers.forEach(server => {
+                const serverItem = document.createElement('div');
+                serverItem.className = 'flex items-center justify-between p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg';
+                serverItem.innerHTML = `
+                    <div class="flex items-center">
+                        <div class="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center text-white mr-2">
+                            <i class="fas fa-${server.icon || 'users'}"></i>
+                        </div>
+                        <div>
+                            <div class="font-medium text-sm">${server.name}</div>
+                            <div class="text-xs text-gray-500 dark:text-gray-400">${server.members.length} members</div>
+                        </div>
+                    </div>
+                    <button class="delete-server p-1.5 bg-danger text-white rounded-full" data-server-id="${server.id}">
+                        <i class="fas fa-trash text-xs"></i>
+                    </button>
+                `;
+                
+                serverItem.querySelector('.delete-server').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    if (confirm(`Are you sure you want to delete server ${server.name}?`)) {
+                        deleteServer(server.id);
+                    }
+                });
+                
+                serverList.appendChild(serverItem);
+            });
         }
         
         // ====== CALL FUNCTIONALITY ======
@@ -2177,6 +2420,7 @@
                 
                 loadFriendRequests();
                 loadDirectMessages();
+                saveData();
             }
         }
         
@@ -2197,6 +2441,7 @@
                 }));
                 
                 loadFriendRequests();
+                saveData();
             }
         }
         
@@ -2208,6 +2453,7 @@
                 name,
                 description,
                 icon: 'users',
+                iconImage: document.getElementById('server-icon-preview-image').src || null,
                 owner: currentUser.id,
                 members: [currentUser.id],
                 admins: [currentUser.id],
@@ -2225,6 +2471,7 @@
             
             document.getElementById('server-create-modal').classList.add('hidden');
             showToast('Server created successfully!', 'success');
+            saveData();
         }
         
         function updateServer(serverId, updates) {
@@ -2234,6 +2481,7 @@
                 action: 'update',
                 data: updates
             }));
+            saveData();
         }
         
         function deleteServer(serverId) {
@@ -2242,6 +2490,38 @@
                 serverId,
                 action: 'delete'
             }));
+            saveData();
+        }
+        
+        function deleteChannel(serverId, channelId) {
+            const server = getServerById(serverId);
+            if (!server) return;
+            
+            const index = server.channels.findIndex(c => c.id === channelId);
+            if (index !== -1) {
+                server.channels.splice(index, 1);
+                updateServer(serverId, { channels: server.channels });
+                
+                if (currentChannel === channelId) {
+                    currentChannel = null;
+                    currentChat = null;
+                    showChat();
+                }
+            }
+        }
+        
+        function addChannel(serverId, name, type = 'text') {
+            const server = getServerById(serverId);
+            if (!server) return;
+            
+            const newChannel = {
+                id: `channel-${Date.now()}`,
+                name,
+                type
+            };
+            
+            server.channels.push(newChannel);
+            updateServer(serverId, { channels: server.channels });
         }
         
         function grantAdminRole(serverId, userId) {
@@ -2298,6 +2578,7 @@
                 });
                 
                 showToast(`${user.name} has been banned`, 'warning');
+                saveData();
             }
         }
         
@@ -2306,6 +2587,7 @@
             if (user) {
                 user.banned = false;
                 showToast(`${user.name} has been unbanned`, 'success');
+                saveData();
             }
         }
         
@@ -2320,6 +2602,7 @@
                 
                 showToast(`Welcome back, ${user.name}!`, 'success');
                 initializeApp();
+                saveData();
                 return true;
             }
             
@@ -2351,8 +2634,9 @@
             users.push(newUser);
             currentUser = newUser;
             
-            showToast(`Welcome to WhatsChat, ${name}!`, 'success');
+            showToast(`Welcome to WhatsCord, ${name}!`, 'success');
             initializeApp();
+            saveData();
             return { success: true };
         }
         
@@ -2368,6 +2652,7 @@
             
             showScreen('auth-container');
             showToast('You have been logged out', 'info');
+            saveData();
         }
         
         function initializeApp() {
@@ -2428,7 +2713,7 @@
         
         // Admin login
         document.getElementById('admin-login').addEventListener('click', () => {
-            login('admin@example.com', 'admin123');
+            login('admin@example.com', 'Arthur2013!');
         });
         
         // Register form
@@ -2669,6 +2954,7 @@
             currentUser.status = 'online';
             showToast('Status set to Online', 'success');
             document.getElementById('profile-modal').classList.add('hidden');
+            saveData();
         });
         
         document.getElementById('status-idle').addEventListener('click', () => {
@@ -2676,6 +2962,7 @@
             currentUser.status = 'idle';
             showToast('Status set to Idle', 'success');
             document.getElementById('profile-modal').classList.add('hidden');
+            saveData();
         });
         
         document.getElementById('status-dnd').addEventListener('click', () => {
@@ -2683,6 +2970,7 @@
             currentUser.status = 'dnd';
             showToast('Status set to Do Not Disturb', 'success');
             document.getElementById('profile-modal').classList.add('hidden');
+            saveData();
         });
         
         document.getElementById('status-invisible').addEventListener('click', () => {
@@ -2690,6 +2978,7 @@
             currentUser.status = 'invisible';
             showToast('Status set to Invisible', 'success');
             document.getElementById('profile-modal').classList.add('hidden');
+            saveData();
         });
         
         // View members
@@ -2852,6 +3141,48 @@
         // Server creation
         document.getElementById('add-server-button').addEventListener('click', showServerCreateModal);
         
+        // Server icon upload for creation
+        document.getElementById('change-server-icon-create').addEventListener('click', () => {
+            document.getElementById('server-icon-upload').click();
+        });
+        
+        document.getElementById('server-icon-upload').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const preview = document.getElementById('server-icon-preview-create');
+                const imagePreview = document.getElementById('server-icon-preview-image');
+                
+                preview.innerHTML = '';
+                imagePreview.src = event.target.result;
+                imagePreview.style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        });
+        
+        // Server icon upload for settings
+        document.getElementById('change-server-icon').addEventListener('click', () => {
+            document.getElementById('server-icon-upload-settings').click();
+        });
+        
+        document.getElementById('server-icon-upload-settings').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const preview = document.getElementById('server-icon-preview');
+                const imagePreview = document.getElementById('server-icon-preview-image-settings');
+                
+                preview.innerHTML = '';
+                imagePreview.src = event.target.result;
+                imagePreview.style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        });
+        
         document.getElementById('server-create-submit').addEventListener('click', () => {
             const name = document.getElementById('server-name-input').value.trim();
             const description = document.getElementById('server-description-input').value.trim();
@@ -2889,8 +3220,9 @@
             if (!server) return;
             
             server.invites = [`invite-${Date.now()}`];
-            document.getElementById('server-invite-link').value = `https://whatschat.com/invite/${server.invites[0]}`;
+            document.getElementById('server-invite-link').value = `https://polite-kringle-7172a3.netlify.app/invite/${server.invites[0]}`;
             showToast('New invite link generated', 'success');
+            saveData();
         });
         
         document.getElementById('revoke-all-links').addEventListener('click', () => {
@@ -2902,6 +3234,7 @@
             server.invites = [];
             showToast('All invite links revoked', 'warning');
             document.getElementById('server-invite-modal').classList.add('hidden');
+            saveData();
         });
         
         // Server settings
@@ -2915,11 +3248,18 @@
             
             const name = document.getElementById('server-settings-name').value.trim();
             const description = document.getElementById('server-settings-description').value.trim();
+            const imagePreview = document.getElementById('server-icon-preview-image-settings');
             
-            updateServer(server.id, {
+            const updates = {
                 name,
                 description
-            });
+            };
+            
+            if (imagePreview.style.display === 'block') {
+                updates.iconImage = imagePreview.src;
+            }
+            
+            updateServer(server.id, updates);
             
             document.getElementById('server-settings-modal').classList.add('hidden');
             showToast('Server settings saved', 'success');
@@ -2932,6 +3272,93 @@
                 deleteServer(currentServer);
                 document.getElementById('server-settings-modal').classList.add('hidden');
             }
+        });
+        
+        // Add channel
+        document.getElementById('add-channel-button').addEventListener('click', () => {
+            if (!currentServer) return;
+            
+            const channelName = prompt('Enter channel name:');
+            if (!channelName) return;
+            
+            const channelType = confirm('Make this a voice channel? (OK for voice, Cancel for text)') ? 'voice' : 'text';
+            
+            addChannel(currentServer, channelName, channelType);
+            showToast(`Channel ${channelName} created`, 'success');
+        });
+        
+        // Admin panel
+        document.getElementById('menu-button').addEventListener('click', () => {
+            if (currentUser && currentUser.isAdmin) {
+                toggleAdminPanel();
+            }
+        });
+        
+        document.getElementById('close-admin-panel').addEventListener('click', toggleAdminPanel);
+        
+        document.getElementById('admin-refresh-data').addEventListener('click', loadAdminPanel);
+        
+        document.getElementById('admin-export-data').addEventListener('click', () => {
+            const data = {
+                users,
+                servers,
+                messages,
+                friendships
+            };
+            
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'whatscord-data.json';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            showToast('Data exported successfully', 'success');
+        });
+        
+        document.getElementById('admin-import-data').addEventListener('click', () => {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            
+            input.onchange = e => {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                const reader = new FileReader();
+                reader.onload = event => {
+                    try {
+                        const data = JSON.parse(event.target.result);
+                        
+                        if (data.users && data.servers && data.messages && data.friendships) {
+                            users = data.users;
+                            servers = data.servers;
+                            messages = data.messages;
+                            friendships = data.friendships;
+                            
+                            saveData();
+                            showToast('Data imported successfully', 'success');
+                            
+                            // Reload UI if user is logged in
+                            if (currentUser) {
+                                initializeApp();
+                            }
+                        } else {
+                            showToast('Invalid data format', 'error');
+                        }
+                    } catch (err) {
+                        showToast('Error importing data', 'error');
+                        console.error(err);
+                    }
+                };
+                reader.readAsText(file);
+            };
+            
+            input.click();
         });
         
         // Theme toggle
@@ -2973,6 +3400,13 @@
                 }
             }
         });
+        
+        // Check if user is already logged in
+        if (currentUser) {
+            initializeApp();
+        } else {
+            showScreen('auth-container');
+        }
     </script>
 </body>
 </html>
